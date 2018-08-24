@@ -1,0 +1,19 @@
+{
+  "name": "stack-management",
+  "version": "1.0.0",
+  "description": "Utilities for managing deployments of docker stacks",
+  "main": "''",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Jamie Terry",
+  "license": "ISC",
+	"dependencies": {
+		"readline-sync": "1.4.9",
+		"walk": "2.3.14",
+		"mkdirp": "0.5.1"
+	}
+}

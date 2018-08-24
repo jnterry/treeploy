@@ -2,3 +2,6 @@
 *#*#
 *.#*
 *~
+
+# Ignore node modules (do an npm install)
+node_modules
