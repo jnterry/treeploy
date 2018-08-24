@@ -1,19 +1,20 @@
 #!/usr/bin/env node
-//
-// This script can be used to build the appdata directory for a stack
-//
-// In the majority of cases this is simply a copy-paste job from the
-// stack's appdata directory to the output location, however there are
-// some additional functions
-//
-// Firstly, any files named "directories.yaml" in the input will be parsed, and
-// a corresponding tree of directories will be created. This is to get around
-// the fact that empty directories cannot be added to git
-//
-// Secondly, any files with a .dot extension will be processed by the dot
-// template engine in order to generate an output file. Note that the .dot
-// extension will be removed, hence the file "nginx.conf.dot" will produce
-// an output file "nginx.conf"
+/**
+ * This script can be used to build the appdata directory for a stack
+ *
+ * In the majority of cases this is simply a copy-paste job from the
+ * stack's appdata directory to the output location, however there are
+ * some additional functions
+ *
+ * Firstly, any files named "directories.yaml" in the input will be parsed, and
+ * a corresponding tree of directories will be created. This is to get around
+ * the fact that empty directories cannot be added to git
+ *
+ * Secondly, any files with a .dot extension will be processed by the dot
+ * template engine in order to generate an output file. Note that the .dot
+ * extension will be removed, hence the file "nginx.conf.dot" will produce
+ * an output file "nginx.conf"
+ */
 
 "use strict"
 
@@ -24,10 +25,10 @@ const execFile = require('child_process').execFile;
 const mkdirp   = require('mkdirp');
 const yaml     = require('node-yaml');
 
-console.log(process.argv[0]);
-console.log(process.argv[1]);
-console.log(process.argv[2]);
 
+
+/////////////////////////////////////////////////////////
+// Get and santize inputs
 // [0] is node executable, [1] is this script
 let input_path  = process.argv[2];
 let output_path = process.argv[3];
@@ -39,7 +40,12 @@ if(input_path == null || output_path == null){
 
 if(!input_path.endsWith ('/')) { input_path  += '/'; }
 if(!output_path.endsWith('/')) { output_path += '/'; }
+/////////////////////////////////////////////////////////
 
+
+
+/////////////////////////////////////////////////////////
+// Check input path exists and is a directory
 if(!fs.existsSync(input_path)){
 	console.error("Input path does not exist");
 	process.exit(1);
@@ -51,7 +57,13 @@ if(!fs.existsSync(input_path)){
 		process.exit(1);
 	}
 }
+/////////////////////////////////////////////////////////
 
+
+
+/////////////////////////////////////////////////////////
+// Check output does not exist, or if it does prompt user
+// if they want to continue
 if(fs.existsSync(output_path)){
 	let out_stat = fs.statSync(output_path);
 
@@ -86,6 +98,7 @@ if(fs.existsSync(output_path)){
 	console.log("Creating output directory: " + output_path);
 	mkdirp.sync(output_path);
 }
+/////////////////////////////////////////////////////////
 
 console.log("Processing directory...");
 
@@ -145,6 +158,15 @@ function processDotFile(input_path, output_path, rel_path){
 	console.log("*** :TODO: *** implement me");
 }
 
+/**
+ * Processes a directories.yaml file in order to create a potentially nested
+ * set of directories
+ *
+ * @oaram {string} input_file - Path of the yaml file, relative to the
+ * processes current working directory, or an absolute path
+ * @param {string} output_root_dir - Path of the root directory that the
+ * created directories will be placed in
+ */
 function processDirectoriesYaml(input_file, output_root_dir){
 
 	function doCreateDirs(dirs, output_root_dir){
