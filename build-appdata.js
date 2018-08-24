@@ -14,27 +14,49 @@
  * template engine in order to generate an output file. Note that the .dot
  * extension will be removed, hence the file "nginx.conf.dot" will produce
  * an output file "nginx.conf"
+ *
+ * The dot template engine will be passed variables produced from the
+ * third argument to this program, or the "dot_vars_file"
+ * This may have the following formats:
+ * .yaml (loaded with node-yaml library)
+ * .yml  (loaded with node-yaml library)
+ * .json (loaded as json)
+ * .js   (loaded with require -> file should module.exports the variables)
  */
 
 "use strict"
 
-const fs       = require('fs');
-const stdin    = require('readline-sync')
-const walk     = require('walk');
-const execFile = require('child_process').execFile;
-const mkdirp   = require('mkdirp');
-const yaml     = require('node-yaml');
+const fs         = require('fs');
+const stdin      = require('readline-sync')
+const walk       = require('walk');
+const execFile   = require('child_process').execFile;
+const mkdirp     = require('mkdirp');
+const yaml       = require('node-yaml');
+const dot_engine = require('dot');
 
-
+dot_engine.templateSettings = {
+  evaluate      : /\{\{([\s\S]+?)\}\}/g,
+  interpolate   : /\{\{=([\s\S]+?)\}\}/g,
+  encode        : /\{\{!([\s\S]+?)\}\}/g,
+  use           : /\{\{#([\s\S]+?)\}\}/g,
+  define        : /\{\{##\s*([\w\.$]+)\s*(\:|=)([\s\S]+?)#\}\}/g,
+  conditional   : /\{\{\?(\?)?\s*([\s\S]*?)\s*\}\}/g,
+  iterate       : /\{\{~\s*(?:\}\}|([\s\S]+?)\s*\:\s*([\w$]+)\s*(?:\:\s*([\w$]+))?\s*\}\})/g,
+  varname       : 'it',
+  strip         : false,
+  append        : true,
+  selfcontained : false,
+};
 
 /////////////////////////////////////////////////////////
 // Get and santize inputs
 // [0] is node executable, [1] is this script
-let input_path  = process.argv[2];
-let output_path = process.argv[3];
+let input_path    = process.argv[2];
+let output_path   = process.argv[3];
+let dot_vars_file = process.argv[4];
 
 if(input_path == null || output_path == null){
-	console.log("Usage: build_appdata.js INPUT_PATH OUTPUT_PATH");
+	console.log("Usage: build_appdata.js INPUT_PATH OUTPUT_PATH [DOT_VARS_FILE]");
 	process.exit(1);
 }
 
@@ -100,6 +122,29 @@ if(fs.existsSync(output_path)){
 }
 /////////////////////////////////////////////////////////
 
+
+/////////////////////////////////////////////////////////
+// Load dot_vars_file
+let dot_vars = null;
+if(dot_vars_file != null){
+	if(!fs.existsSync(dot_vars_file)){
+		console.error("Specified dot vars file does not exist");
+		process.exit(1);
+	}
+	if(dot_vars_file.endsWith('.yaml') || dot_vars_file.endsWith('.yaml')){
+		dot_vars = yaml.readSync(dot_vars_file);
+	} else if (dot_vars_file.endsWith('.json')){
+		dot_vars = JSON.parse(fs.readFileSync(dot_vars_file, 'utf8'));
+	} else if (dot_vars_file.endsWith('.js')){
+		dot_vars = require(dot_vars_file);
+	} else {
+		console.error("Specified dot vars file has unrecognised format!");
+		process.exit(1);
+	}
+}
+/////////////////////////////////////////////////////////
+
+
 console.log("Processing directory...");
 
 let walker = walk.walk(input_path, {});
@@ -142,7 +187,7 @@ walker.on("file", function(root_path, stat, next) {
 	if(rel_file.match(/.dot$/)){
 		// then its a dot template, process it before outputing
 		console.log("Processing dot template: " + rel_path);
-		processDotFile(input_path, output_path, rel_path)
+		processDotFile(input_path, output_path, rel_path, dot_vars)
 	} else if (rel_file.match(/^directories.ya?ml$/)){
 		// then create directories accoridng to the yaml
 		console.log("Creating directories in: " + rel_path);
@@ -159,8 +204,32 @@ walker.on("file", function(root_path, stat, next) {
 	next();
 });
 
-function processDotFile(input_path, output_path, rel_path){
-	console.log("*** :TODO: *** implement me");
+/**
+ * Process a dot file template and writes the output to the output directory
+ *
+ * @param {string} input_path  - Path of the root input  directory
+ * @param {string} output_path - Path of the root output directory
+ * @param {string} rel_path    - Path of template file relative to input_path
+ * @param {object} dot_vars    - Variables to be passed as model to template
+ */
+function processDotFile(input_path, output_path, rel_path, dot_vars){
+	let template_content  = fs.readFileSync(input_path + rel_path);
+	let template_function = dot_engine.template(template_content);
+	let output_content    = null;
+
+	try {
+		output_content = template_function(dot_vars);
+	} catch (e) {
+		console.error("Failed to process dot template: '" + rel_path + "', error follows:");
+		console.dir(e);
+		process.exit(1);
+	}
+
+	// remove .dot extension
+	let output_filename = output_path + rel_path;
+	output_filename = output_filename.substring(0, output_filename.length-4);
+
+	fs.writeFileSync(output_filename, output_content);
 }
 
 /**
