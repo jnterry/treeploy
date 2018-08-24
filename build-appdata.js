@@ -9,6 +9,10 @@
  * Firstly, any files named "directories.yaml" in the input will be parsed, and
  * a corresponding tree of directories will be created. This is to get around
  * the fact that empty directories cannot be added to git
+ * Note that the permissions of the directories.yaml file will be applied to
+ * the created directories, hence directories.yaml should be executable in
+ * order for the directories to be listable (since the executable flag
+ * on a directory means that you can list the contents)
  *
  * Secondly, any files with a .dot extension will be processed by the dot
  * template engine in order to generate an output file. Note that the .dot
@@ -29,6 +33,7 @@
 const fs         = require('fs');
 const stdin      = require('readline-sync')
 const walk       = require('walk');
+const execSync   = require('child_process').execSync;
 const execFile   = require('child_process').execFile;
 const mkdirp     = require('mkdirp');
 const yaml       = require('node-yaml');
@@ -62,6 +67,19 @@ if(input_path == null || output_path == null){
 
 if(!input_path.endsWith ('/')) { input_path  += '/'; }
 if(!output_path.endsWith('/')) { output_path += '/'; }
+/////////////////////////////////////////////////////////
+
+
+
+/////////////////////////////////////////////////////////
+// Check if we are root
+if(process.getuid() != 0){
+	console.log('Not running as root, may not be able to preserve file permissions, owners, etc');
+	let response = stdin.question('Continue? [y/N]');
+	if(!response.match('[Yy]|[Yy][Ee][Ss]')){
+		process.exit(0);
+	}
+}
 /////////////////////////////////////////////////////////
 
 
@@ -119,8 +137,10 @@ if(fs.existsSync(output_path)){
 } else {
 	console.log("Creating output directory: " + output_path);
 	mkdirp.sync(output_path);
+	syncFileMetaData(input_path, output_path);
 }
 /////////////////////////////////////////////////////////
+
 
 
 /////////////////////////////////////////////////////////
@@ -195,6 +215,7 @@ walker.on("file", function(root_path, stat, next) {
 	} else {
 		console.log("Copying file to " + output_path + rel_path);
 		execFile('/bin/cp', ['--no-target-directory',
+												 '--preserve', // keep owner, permissions, filestamp, etc
 												 input_path + rel_path,
 												 output_path + rel_path
 												]
@@ -203,6 +224,19 @@ walker.on("file", function(root_path, stat, next) {
 
 	next();
 });
+
+/**
+ * Takes the permissions, owner, etc of an input file and applies them
+ * to an output file, without changing the file's contents
+ *
+ * @param in_path {string}  - Path to the file whose meta data you wish to copy
+ * @param out_path {string} - Path to file to apply to meta data to
+ */
+function syncFileMetaData(in_path, out_path){
+	execSync("chown $(stat -c '%u:%g' " + in_path + ") " + out_path);
+	execSync("chmod $(stat -c '%a' "    + in_path + ") " + out_path);
+	execSync("touch -r " + in_path + " " + out_path); // copy timestamps
+}
 
 /**
  * Process a dot file template and writes the output to the output directory
@@ -230,6 +264,7 @@ function processDotFile(input_path, output_path, rel_path, dot_vars){
 	output_filename = output_filename.substring(0, output_filename.length-4);
 
 	fs.writeFileSync(output_filename, output_content);
+	syncFileMetaData(input_path + rel_path, output_filename);
 }
 
 /**
@@ -250,17 +285,14 @@ function processDirectoriesYaml(input_file, output_root_dir){
 
 		if(typeof dirs == 'string' || typeof dirs == 'number'){
 			mkdirp(output_root_dir + dirs);
+			syncFileMetaData(input_file, output_root_dir + dirs);
 		} else if(Array.isArray(dirs)){
 			for(let entry of dirs){
-				if(typeof entry == 'string'){
-					mkdirp(output_root_dir + entry);
-				} else {
-					doCreateDirs(entry, output_root_dir);
-				}
+				doCreateDirs(entry, output_root_dir);
 			}
 		} else {
 			for(let entry in dirs){
-				mkdirp(output_root_dir + entry);
+				doCreateDirs(entry, output_root_dir);
 				doCreateDirs(dirs[entry], output_root_dir + entry);
 			}
 		}
