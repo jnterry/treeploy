@@ -113,7 +113,12 @@ walker.on("file", function(root_path, stat, next) {
 	// relative paths -> relative to both input_path and output_path
 	let rel_dir  = root_path.substring(input_path.length+1);
 	let rel_file = stat.name;
-	let rel_path = rel_dir + '/' + rel_file;
+	let rel_path = null;
+	if(rel_dir.length != 0){
+		rel_path = rel_dir + '/' + rel_file;
+	} else {
+		rel_path = rel_file;
+	}
 
 	if(rel_file.match(/^#.*#$|^.#|.*~$/)){
 		console.log("Skipping emacs backup file: " + rel_path);
