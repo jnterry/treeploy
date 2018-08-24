@@ -22,6 +22,7 @@ const stdin    = require('readline-sync')
 const walk     = require('walk');
 const execFile = require('child_process').execFile;
 const mkdirp   = require('mkdirp');
+const yaml     = require('node-yaml');
 
 console.log(process.argv[0]);
 console.log(process.argv[1]);
@@ -123,9 +124,11 @@ walker.on("file", function(root_path, stat, next) {
 	if(rel_file.match(/.dot$/)){
 		// then its a dot template, process it before outputing
 		console.log("Processing dot template: " + rel_path);
+		processDotFile(input_path, output_path, rel_path)
 	} else if (rel_file.match(/^directories.ya?ml$/)){
 		// then create directories accoridng to the yaml
 		console.log("Creating directories in: " + rel_path);
+		processDirectoriesYaml(input_path + rel_path, output_path + rel_dir);
 	} else {
 		console.log("Copying file to " + output_path + rel_path);
 		execFile('/bin/cp', ['--no-target-directory',
@@ -137,3 +140,36 @@ walker.on("file", function(root_path, stat, next) {
 
 	next();
 });
+
+function processDotFile(input_path, output_path, rel_path){
+	console.log("*** :TODO: *** implement me");
+}
+
+function processDirectoriesYaml(input_file, output_root_dir){
+
+	function doCreateDirs(dirs, output_root_dir){
+		if(!output_root_dir.endsWith('/')){
+			output_root_dir += '/';
+		}
+
+		if(typeof dirs == 'string' || typeof dirs == 'number'){
+			mkdirp(output_root_dir + dirs);
+		} else if(Array.isArray(dirs)){
+			for(let entry of dirs){
+				if(typeof entry == 'string'){
+					mkdirp(output_root_dir + entry);
+				} else {
+					doCreateDirs(entry, output_root_dir);
+				}
+			}
+		} else {
+			for(let entry in dirs){
+				mkdirp(output_root_dir + entry);
+				doCreateDirs(dirs[entry], output_root_dir + entry);
+			}
+		}
+	}
+
+	let dirs = yaml.readSync(input_file);
+	doCreateDirs(dirs, output_root_dir);
+}
