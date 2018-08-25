@@ -391,10 +391,29 @@ function processTreeYaml(input_file, output_root_dir){
 
 			let full_path = output_root_dir + name;
 
+			let stats = null;
+			if(fs.existsSync(full_path)){
+				stats = fs.statSync(full_path);
+			}
+
 			if(name.endsWith('/')){
+				if(stats != null && !stats.isDirectory()){
+					console.log("Overitting existing non-directory with directory: " + full_path);
+					fs.unlinkSync(full_path);
+				}
 				mkdirp(full_path);
 			} else {
-				fs.writeFileSync(full_path, '');
+				if(stats == null){
+					console.log("Overitting existing non-file with file: " + full_path);
+					fs.writeFileSync(full_path, '');
+				} else {
+					if(!stats.isFile()){
+						fs.unlinkSync(full_path);
+						fs.wrteFileSync(full_path, '');
+					} else {
+						console.log("Not overriting existing file: " + full_path);
+					}
+				}
 			}
 
 			applyFilePermissions(opts, full_path);
