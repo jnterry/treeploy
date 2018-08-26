@@ -1,4 +1,5 @@
-const execSync   = require('child_process').execSync;
+const userid = require('userid');
+const fs     = require('fs');
 
 /**
  * Takes the permissions, owner, etc of an input file and applies them
@@ -8,6 +9,7 @@ const execSync   = require('child_process').execSync;
  * @param out_path {string} - Path to file to apply to meta data to
  */
 function syncFileMetaData(in_path, out_path){
+
 	execSync("chown $(stat -c '%u:%g' " + in_path + ") " + out_path);
 	execSync("chmod $(stat -c '%a' "    + in_path + ") " + out_path);
 	execSync("touch -r " + in_path + " " + out_path); // copy timestamps
@@ -16,31 +18,57 @@ function syncFileMetaData(in_path, out_path){
 /**
  * Applies a mode, owner and group to an existing file path
  *
+ * @param {string} path         - Path of the file/directory to modify
  * @param {Object} options      - All options for the file
  * @param {string} options.mode - Representation of file mode, eg: '0644'w
  * @param {(string|number)} options.owner - Username or uid of file owner
  * @param {(string|number)} options.group - Group name or gid of file's group
  */
-function applyFilePermissions(options, path){
-	if(options.mode  != null){
-		execSync('chmod ' + options.mode  + ' ' + path);
+function applyFilePermissions(path, options){
+	if(options.mode != null){
+		fs.chmodSync(path, parseInt(options.mode, 8));
 	}
 
+	let cur_stats = fs.statSync(path);
+	let uid = cur_stats.uid;
+	let gid = cur_stats.gid;
+
 	if(options.owner != null){
-		if(typeof options.owner != 'number' && options.owner != 'root'){
-			console.log("WARNING: uid's should be prefered over usernames to ensure " +
-									"correct operation on systems where the user does not exist, got: " +
-									options.owner);
+		if (typeof options.owner === 'number'){
+			uid = options.owner;
+		} else if(typeof options.owner === 'string'){
+			if(options.owner === 'root'){
+				uid = 0;
+			} else {
+ 				console.log("WARNING: uid's should be prefered over usernames to ensure " +
+										"correct operation on systems where the user does not exist, got: " +
+										options.owner);
+				uid = userid.uid(options.owner);
+			}
+		} else {
+			throw new Error("Invalid type for options.user, expected number representing uid or string representing username");
 		}
-		execSync('chown ' + options.owner + ' ' + path);
-	}
+}
+
 	if(options.group != null){
-		if(typeof options.group != 'number' && options.group != 'root'){
-			console.log("WARNING: gid's should be prefered over group names to ensure " +
-									"correct operation on systems where the group does not exist, got: " +
-									options.group);
+		if(typeof options.group === 'number'){
+			gid = options.group;
+		} else if (typeof options.group === 'string') {
+			if(options.group === 'root'){
+				gid = 0;
+			} else if(typeof options.group === 'string') {
+				console.log("WARNING: gid's should be prefered over group names to ensure " +
+										"correct operation on systems where the group does not exist, got: " +
+										options.group);
+				gid = userid.gid(options.group);
+			} else {
+				throw new Error("Invalid type for options.group, expected number representing uid or string representing group name");
+			}
 		}
-		execSync('chgrp ' + options.group + ' ' + path);
+	}
+
+	if(uid != cur_stats.uid || gid != cur_stats.gid){
+		fs.chownSync(path, uid, gid);
 	}
 }
 

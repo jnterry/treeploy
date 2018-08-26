@@ -9,8 +9,9 @@
 		"url": "git://github.com/jnterry/treeploy.git"
 	},
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+		"test": "./node_modules/.bin/mocha test/all.js --reporter spec",
+		"cover": "node_modules/istanbul/lib/cli.js cover node_modules/mocha/bin/_mocha -- -R spec test/all.js"
+	},
   "author": "Jamie Terry",
   "license": "MIT",
 	"dependencies": {
@@ -18,6 +19,13 @@
 		"walk": "2.3.14",
 		"mkdirp": "0.5.1",
 		"node-yaml": "3.1.1",
-		"dot": "1.1.2"
+		"dot": "1.1.2",
+		"userid": "0.3.1"
+	},
+	"devDependencies": {
+		"mocha": "5.2.0",
+		"chai": "4.1.2",
+		"istanbul": "0.4.5",
+		"mock-fs": "4.6.0"
 	}
 }

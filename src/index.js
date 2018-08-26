@@ -198,7 +198,7 @@ function processTreeYaml(input_file, output_root_dir){
 				}
 			}
 
-			file_utils.applyFilePermissions(opts, full_path);
+			file_utils.applyFilePermissions(full_path, opts);
 
 			if(opts.children != null){
 				buildTreeRecursive(opts.children, full_path);
