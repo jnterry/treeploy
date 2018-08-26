@@ -9,7 +9,7 @@
 		"url": "git://github.com/jnterry/treeploy.git"
 	},
   "scripts": {
-		"test": "./node_modules/.bin/mocha test/all.js --reporter spec",
+		"test": "sudo ./node_modules/.bin/mocha test/all.js --reporter spec",
 		"cover": "node_modules/istanbul/lib/cli.js cover node_modules/mocha/bin/_mocha -- -R spec test/all.js"
 	},
   "author": "Jamie Terry",
