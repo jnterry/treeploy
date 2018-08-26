@@ -31,7 +31,7 @@ let file_content_config_tree = `
 `;
 
 let file_content_bin_tree = `
-- script.sh:
+- z_script.sh:
     owner : {{= it.web.uid }}
     group : {{= it.web.gid }}
 `;
@@ -114,6 +114,9 @@ it('Complex scenario', () => {
 			expect(fs.statSync  ('target/bin').isDirectory());
 
 			expect(fs.existsSync('target/bin/z_script.sh')).is.true;
+
+			let contents = fs.readFileSync('target/bin/z_script.sh').toString('utf8');
+			expect(contents).is.deep.equal('echo hi');
 
 
 			let stats = fs.statSync('target/bin/z_script.sh');
