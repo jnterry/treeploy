@@ -1,64 +1,6 @@
 #!/usr/bin/env node
 /**
- * This script can be used to build the appdata directory for a stack
- *
- * In the majority of cases this is simply a copy-paste job from the
- * stack's appdata directory to the output location, however there are
- * some additional functions:
- *
- * -------------------------------------------------------------------
- *
- * Any files named "tree.yaml" in the input tree will be parsed, and
- * a corresponding tree of directories and empty files will be created.
- * - Existing files will not be overwritten.
- * - Existing files/directories may have their permissions updated
- *
- * This solves a number of issues:
- * - Empty directories cannot be added to git
- * - Git will not preserve file/directory ownership (tree.yaml may be used
- *   to apply permissions to files/directories that actually exist in git)
- * - Application may require files to exist (eg, in appdata/persistent
- *   or appdata/logs) but we do not want to copy a blank file over the
- *   top of one that the application has modified
- *
- * Format of tree.yaml:
- * - dir_a/:
- *     mode: '0600'
- *     owner: root
- *     group: root
- * - dir_b/
- * - dir_c:
- *     owner: 1000
- *     group: 1000
- *     children:
- *       - file_1
- *       - file_2
- *       - dir/
- * - file_a
- * - file_b:
- *     mode: '0777'
- *
- * Any entry with a trailing slash or a "children" member will be created
- * as a directory, all others will be created as files
- *
- * Note that the tree.yaml files will always be applied after any dot templates
- * have been processed or files have been copied, hence it is possible to
- * use them to apply permissions to files which exist in the git repo
- *
- *
- * * -------------------------------------------------------------------
- *
- * Any files with a .dot extension will be processed by the dot
- * template engine in order to generate an output file. Note that the .dot
- * extension will be removed, hence the file "nginx.conf.dot" will produce
- * an output file "nginx.conf"
- * The dot template engine will be passed variables produced from the
- * third argument to this program, or the "dot_vars_file"
- * This may have the following formats:
- * .yaml (loaded with node-yaml library)
- * .yml  (loaded with node-yaml library)
- * .json (loaded as json)
- * .js   (loaded with require -> file should module.exports the variables)
+ * CLI wrapper around treeploy functionality
  */
 
 "use strict"

@@ -1,3 +1,7 @@
+/**
+ * Main file exporting the treeploy function
+ */
+
 const fs         = require('fs');
 const walk       = require('walk');
 const execFile   = require('child_process').execFile;
