@@ -1,76 +1,11 @@
-#!/usr/bin/env node
-/**
- * This script can be used to build the appdata directory for a stack
- *
- * In the majority of cases this is simply a copy-paste job from the
- * stack's appdata directory to the output location, however there are
- * some additional functions:
- *
- * -------------------------------------------------------------------
- *
- * Any files named "tree.yaml" in the input tree will be parsed, and
- * a corresponding tree of directories and empty files will be created.
- * - Existing files will not be overwritten.
- * - Existing files/directories may have their permissions updated
- *
- * This solves a number of issues:
- * - Empty directories cannot be added to git
- * - Git will not preserve file/directory ownership (tree.yaml may be used
- *   to apply permissions to files/directories that actually exist in git)
- * - Application may require files to exist (eg, in appdata/persistent
- *   or appdata/logs) but we do not want to copy a blank file over the
- *   top of one that the application has modified
- *
- * Format of tree.yaml:
- * - dir_a/:
- *     mode: '0600'
- *     owner: root
- *     group: root
- * - dir_b/
- * - dir_c:
- *     owner: 1000
- *     group: 1000
- *     children:
- *       - file_1
- *       - file_2
- *       - dir/
- * - file_a
- * - file_b:
- *     mode: '0777'
- *
- * Any entry with a trailing slash or a "children" member will be created
- * as a directory, all others will be created as files
- *
- * Note that the tree.yaml files will always be applied after any dot templates
- * have been processed or files have been copied, hence it is possible to
- * use them to apply permissions to files which exist in the git repo
- *
- *
- * * -------------------------------------------------------------------
- *
- * Any files with a .dot extension will be processed by the dot
- * template engine in order to generate an output file. Note that the .dot
- * extension will be removed, hence the file "nginx.conf.dot" will produce
- * an output file "nginx.conf"
- * The dot template engine will be passed variables produced from the
- * third argument to this program, or the "dot_vars_file"
- * This may have the following formats:
- * .yaml (loaded with node-yaml library)
- * .yml  (loaded with node-yaml library)
- * .json (loaded as json)
- * .js   (loaded with require -> file should module.exports the variables)
- */
-
-"use strict"
-
 const fs         = require('fs');
-const stdin      = require('readline-sync')
 const walk       = require('walk');
-const execSync   = require('child_process').execSync;
 const execFile   = require('child_process').execFile;
 const mkdirp     = require('mkdirp');
 const yaml       = require('node-yaml');
 const dot_engine = require('dot');
+
+const file_utils = require('./file_utils.js');
 
 dot_engine.templateSettings = {
   evaluate      : /\{\{([\s\S]+?)\}\}/g,
@@ -86,229 +21,76 @@ dot_engine.templateSettings = {
   selfcontained : false,
 };
 
-/////////////////////////////////////////////////////////
-// Get and santize inputs
-// [0] is node executable, [1] is this script
-let input_path    = process.argv[2];
-let output_path   = process.argv[3];
-let dot_vars_file = process.argv[4];
+function treeploy(input_path, output_path, options){
 
-if(input_path == null || output_path == null){
-	console.log("Usage: build_appdata.js INPUT_PATH OUTPUT_PATH [DOT_VARS_FILE]");
-	process.exit(1);
-}
+	console.log("Processing directory...");
 
-if(!input_path.endsWith ('/')) { input_path  += '/'; }
-if(!output_path.endsWith('/')) { output_path += '/'; }
-/////////////////////////////////////////////////////////
+	let walker = walk.walk(input_path, {});
 
+	let tree_yamls = [];
 
-
-/////////////////////////////////////////////////////////
-// Check if we are root
-if(process.getuid() != 0){
-	console.log('Not running as root, may not be able set file permissions, owners, etc');
-	let response = stdin.question('Continue? [y/N]');
-	if(!response.match('[Yy]|[Yy][Ee][Ss]')){
-		process.exit(0);
-	}
-}
-/////////////////////////////////////////////////////////
-
-
-
-/////////////////////////////////////////////////////////
-// Check input path exists and is a directory
-if(!fs.existsSync(input_path)){
-	console.error("Input path does not exist");
-	process.exit(1);
-} else {
-	let in_stat = fs.statSync(input_path);
-
-	if(!in_stat.isDirectory()){
-		console.error("Input path is not a directory");
-		process.exit(1);
-	}
-}
-/////////////////////////////////////////////////////////
-
-
-
-/////////////////////////////////////////////////////////
-// Check output does not exist, or if it does prompt user
-// if they want to continue
-if(fs.existsSync(output_path)){
-	let out_stat = fs.statSync(output_path);
-
-	if(out_stat.isFile()){
-		console.log("The output path: '" + output_path +
-								 "' is a file and must be deleted to continue");
-
-		let response = stdin.question("Continue? [y/N] ");
-		if(response.match('[Yy]|[Yy][Ee][Ss]')){
-			fs.unlinkSync(output_path);
-		} else {
-			process.exit(0);
+	walker.on("file", function(root_path, stat, next) {
+		if(!root_path.startsWith(input_path)){
+			console.error("Unexpected input file outside of input directory: "
+									+ root_path + "/" + stat.name);
+			process.exit(1);
 		}
-	} else if (out_stat.isDirectory()){
-		let contents = fs.readdirSync(output_path);
-		if(contents.length != 0){
-			console.log("Output path is a non empty directory!");
-			console.log(" - Files in source and destination will be overwritten");
-			console.log(" - Files in destination but not in source will be untouched");
-			console.log(" - Files in source but not in destination will be created\n");
-			let response = stdin.question("Continue? [y/N] ");
-			if(!response.match('[Yy]|[Yy][Ee][Ss]')){
-				process.exit(0);
+
+		// relative paths -> relative to both input_path and output_path
+		let rel_dir  = root_path.substring(input_path.length+1);
+		let rel_file = stat.name;
+		let rel_path = null;
+		if(rel_dir.length != 0){
+			rel_path = rel_dir + '/' + rel_file;
+		} else {
+			rel_path = rel_file;
+		}
+
+		if(rel_file.match(/^#.*#$|^.#|.*~$/)){
+			console.log("Skipping emacs backup file: " + rel_path);
+			next();
+			return;
+		}
+
+		// Create the directory in the output
+		if(fs.existsSync(output_path + rel_dir)){
+			if(!fs.statSync(output_path + rel_dir).isDirectory()){
+				console.log("Removing existing file: " + output_path + rel_dir);
+				fs.unlinkSync(output_path);
 			}
 		}
-	} else {
-		console.log("Output path exists, but is not a file or directory");
-		console.log("Don't know what to do, quiting...");
-		process.exit(1);
-	}
-} else {
-	console.log("Creating output directory: " + output_path);
-	mkdirp.sync(output_path);
-	syncFileMetaData(input_path, output_path);
-}
-/////////////////////////////////////////////////////////
+		if(!fs.existsSync(output_path + rel_dir)){
+			console.log("Creating directory: " + output_path + rel_dir);
+			mkdirp.sync(output_path + rel_dir);
+		}
 
+		// Check if file is special case
+		if(rel_file.match(/.dot$/)){
+			// then its a dot template, process it before outputing
+			console.log("Processing dot template: " + rel_path);
+			processDotFile(input_path, output_path, rel_path, options.dot_models.it)
+		} else if (rel_file.match(/^tree.ya?ml$/)){
+			// then defer execution of the tree.yaml until the end
+			tree_yamls.push({ input_path, output_path, rel_path, rel_dir });
+		} else {
+			console.log("Copying file to " + output_path + rel_path);
+			execFile('/bin/cp', ['--no-target-directory',
+													 '--preserve', // keep owner, permissions, filestamp, etc
+													 input_path + rel_path,
+													 output_path + rel_path
+			]
+			);
+		}
 
-
-/////////////////////////////////////////////////////////
-// Load dot_vars_file
-let dot_vars = null;
-if(dot_vars_file != null){
-	if(!fs.existsSync(dot_vars_file)){
-		console.error("Specified dot vars file does not exist");
-		process.exit(1);
-	}
-	if(dot_vars_file.endsWith('.yaml') || dot_vars_file.endsWith('.yaml')){
-		dot_vars = yaml.readSync(dot_vars_file);
-	} else if (dot_vars_file.endsWith('.json')){
-		dot_vars = JSON.parse(fs.readFileSync(dot_vars_file, 'utf8'));
-	} else if (dot_vars_file.endsWith('.js')){
-		dot_vars = require(dot_vars_file);
-	} else {
-		console.error("Specified dot vars file has unrecognised format!");
-		process.exit(1);
-	}
-}
-/////////////////////////////////////////////////////////
-
-
-console.log("Processing directory...");
-
-let walker = walk.walk(input_path, {});
-
-let tree_yamls = [];
-
-walker.on("file", function(root_path, stat, next) {
-	if(!root_path.startsWith(input_path)){
-		console.error("Unexpected input file outside of input directory: "
-									+ root_path + "/" + stat.name);
-		process.exit(1);
-	}
-
-	// relative paths -> relative to both input_path and output_path
-	let rel_dir  = root_path.substring(input_path.length+1);
-	let rel_file = stat.name;
-	let rel_path = null;
-	if(rel_dir.length != 0){
-		rel_path = rel_dir + '/' + rel_file;
-	} else {
-		rel_path = rel_file;
-	}
-
-	if(rel_file.match(/^#.*#$|^.#|.*~$/)){
-		console.log("Skipping emacs backup file: " + rel_path);
 		next();
-		return;
-	}
+	});
 
-	// Create the directory in the output
-	if(fs.existsSync(output_path + rel_dir)){
-		if(!fs.statSync(output_path + rel_dir).isDirectory()){
-			console.log("Removing existing file: " + output_path + rel_dir);
-			fs.unlinkSync(output_path);
+	walker.on('end', function(){
+		for(let job of tree_yamls){
+			console.log("Creating tree described by: " + job.rel_path);
+			processTreeYaml(job.input_path + job.rel_path, job.output_path + job.rel_dir);
 		}
-	}
-	if(!fs.existsSync(output_path + rel_dir)){
-		console.log("Creating directory: " + output_path + rel_dir);
-		mkdirp.sync(output_path + rel_dir);
-	}
-
-	// Check if file is special case
-	if(rel_file.match(/.dot$/)){
-		// then its a dot template, process it before outputing
-		console.log("Processing dot template: " + rel_path);
-		processDotFile(input_path, output_path, rel_path, dot_vars)
-	} else if (rel_file.match(/^tree.ya?ml$/)){
-		// then defer execution of the tree.yaml until the end
-		tree_yamls.push({ input_path, output_path, rel_path, rel_dir });
-	} else {
-		console.log("Copying file to " + output_path + rel_path);
-		execFile('/bin/cp', ['--no-target-directory',
-												 '--preserve', // keep owner, permissions, filestamp, etc
-												 input_path + rel_path,
-												 output_path + rel_path
-												]
-						);
-	}
-
-	next();
-});
-
-walker.on('end', function(){
-	for(let job of tree_yamls){
-		console.log("Creating tree described by: " + job.rel_path);
-		processTreeYaml(job.input_path + job.rel_path, job.output_path + job.rel_dir);
-	}
-});
-
-/**
- * Takes the permissions, owner, etc of an input file and applies them
- * to an output file, without changing the file's contents
- *
- * @param in_path {string}  - Path to the file whose meta data you wish to copy
- * @param out_path {string} - Path to file to apply to meta data to
- */
-function syncFileMetaData(in_path, out_path){
-	execSync("chown $(stat -c '%u:%g' " + in_path + ") " + out_path);
-	execSync("chmod $(stat -c '%a' "    + in_path + ") " + out_path);
-	execSync("touch -r " + in_path + " " + out_path); // copy timestamps
-}
-
-/**
- * Applies a mode, owner and group to an existing file path
- *
- * @param {Object} options      - All options for the file
- * @param {string} options.mode - Representation of file mode, eg: '0644'w
- * @param {(string|number)} options.owner - Username or uid of file owner
- * @param {(string|number)} options.group - Group name or gid of file's group
- */
-function applyFilePermissions(options, path){
-	if(options.mode  != null){
-		execSync('chmod ' + options.mode  + ' ' + path);
-	}
-
-	if(options.owner != null){
-		if(typeof options.owner != 'number' && options.owner != 'root'){
-			console.log("WARNING: uid's should be prefered over usernames to ensure " +
-									"correct operation on systems where the user does not exist, got: " +
-								 options.owner);
-		}
-		execSync('chown ' + options.owner + ' ' + path);
-	}
-	if(options.group != null){
-		if(typeof options.group != 'number' && options.group != 'root'){
-			console.log("WARNING: gid's should be prefered over group names to ensure " +
-									"correct operation on systems where the group does not exist, got: " +
-								 options.group);
-		}
-		execSync('chgrp ' + options.group + ' ' + path);
-	}
+	});
 }
 
 /**
@@ -337,7 +119,7 @@ function processDotFile(input_path, output_path, rel_path, dot_vars){
 	output_filename = output_filename.substring(0, output_filename.length-4);
 
 	fs.writeFileSync(output_filename, output_content);
-	syncFileMetaData(input_path + rel_path, output_filename);
+	file_utils.syncFileMetaData(input_path + rel_path, output_filename);
 }
 
 /**
@@ -416,7 +198,7 @@ function processTreeYaml(input_file, output_root_dir){
 				}
 			}
 
-			applyFilePermissions(opts, full_path);
+			file_utils.applyFilePermissions(opts, full_path);
 
 			if(opts.children != null){
 				buildTreeRecursive(opts.children, full_path);
@@ -424,3 +206,5 @@ function processTreeYaml(input_file, output_root_dir){
 		}
 	}
 }
+
+module.exports = treeploy;
