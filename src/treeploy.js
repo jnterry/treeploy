@@ -24,9 +24,6 @@ if(input_path == null || output_path == null){
 	console.log("Usage: build_appdata.js INPUT_PATH OUTPUT_PATH [DOT_VARS_FILE]");
 	process.exit(1);
 }
-
-if(!input_path.endsWith ('/')) { input_path  += '/'; }
-if(!output_path.endsWith('/')) { output_path += '/'; }
 /////////////////////////////////////////////////////////
 
 

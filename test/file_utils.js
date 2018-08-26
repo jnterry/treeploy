@@ -7,7 +7,6 @@
 const expect     = require('chai').expect;
 const mockfs     = require('mock-fs');
 const fs         = require('fs');
-const os         = require("os");
 const execSync   = require('child_process').execSync;
 
 const file_utils = require('../src/file_utils.js');
@@ -140,7 +139,7 @@ describe('syncFileMetaData', () => {
 			'source.txt' : mockfs.file({
 				uid  : 1234,
 				gid  : 4321,
-				mode : parseInt(755, 8),
+				mode : parseInt('755', 8),
 			}),
 			'target.txt' : mockfs.file({
 				uid  : 3000,

@@ -26,6 +26,8 @@ dot_engine.templateSettings = {
 };
 
 function treeploy(input_path, output_path, options){
+	if(!input_path.endsWith ('/')) { input_path  += '/'; }
+	if(!output_path.endsWith('/')) { output_path += '/'; }
 
 	console.log("Processing directory...");
 

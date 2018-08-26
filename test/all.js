@@ -17,4 +17,5 @@ function importTest(name, path){
 
 describe('treeploy', () => {
 	importTest('file_utils');
+	importTest('deploy_copy');
 });

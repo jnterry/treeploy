@@ -1,3 +1,9 @@
+/**
+ * Various utilities for manipulating the file system
+ */
+
+"use strict";
+
 const userid = require('userid');
 const fs     = require('fs');
 
