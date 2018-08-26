@@ -4,7 +4,7 @@
 
 const fs         = require('fs');
 const walk       = require('walk');
-const mkdirp     = require('mkdirp');
+const mkdirp     = require('mkdirp').sync;
 const yaml       = require('node-yaml');
 const dot_engine = require('dot');
 const Q          = require('q');
@@ -65,7 +65,7 @@ function treeploy(input_path, output_path, options){
 	if(!output_path.endsWith('/')) { output_path += '/'; }
 
 	if(!fs.existsSync(output_path)){
-		fs.mkdirSync(output_path);
+		mkdirp(output_path);
 	}
 
 	console.log("Processing directory...");
@@ -100,7 +100,7 @@ function treeploy(input_path, output_path, options){
 		}
 		if(!fs.existsSync(output_path + rel.dir)){
 			console.log("Creating directory: " + output_path + rel.dir);
-			mkdirp.sync(output_path + rel.dir);
+			mkdirp(output_path + rel.dir);
 		}
 
 		// Check if file is special case

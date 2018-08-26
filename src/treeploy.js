@@ -7,7 +7,7 @@
 
 const fs         = require('fs');
 const stdin      = require('readline-sync')
-const mkdirp     = require('mkdirp');
+const mkdirp     = require('mkdirp').sync;
 const yaml       = require('node-yaml');
 
 const file_utils = require('./file_utils.js');
@@ -93,7 +93,7 @@ if(fs.existsSync(output_path)){
 	}
 } else {
 	console.log("Creating output directory: " + output_path);
-	mkdirp.sync(output_path);
+	mkdirp(output_path);
 	file_utils.syncFileMetaData(input_path, output_path);
 }
 /////////////////////////////////////////////////////////
