@@ -1,6 +1,10 @@
 const userid = require('userid');
 const fs     = require('fs');
 
+function getStatPermissionString(stats){
+	return '0' + (stats.mode & parseInt('777', 8)).toString(8);
+}
+
 /**
  * Takes the permissions, owner, etc of an input file and applies them
  * to an output file, without changing the file's contents
@@ -9,10 +13,13 @@ const fs     = require('fs');
  * @param out_path {string} - Path to file to apply to meta data to
  */
 function syncFileMetaData(in_path, out_path){
+	let in_stat = fs.statSync(in_path);
 
-	execSync("chown $(stat -c '%u:%g' " + in_path + ") " + out_path);
-	execSync("chmod $(stat -c '%a' "    + in_path + ") " + out_path);
-	execSync("touch -r " + in_path + " " + out_path); // copy timestamps
+	applyFilePermissions(out_path, {
+		owner : in_stat.uid,
+		group : in_stat.gid,
+		mode  : getStatPermissionString(in_stat)
+	});
 }
 
 /**
@@ -75,4 +82,5 @@ function applyFilePermissions(path, options){
 module.exports = {
 	syncFileMetaData,
 	applyFilePermissions,
+	getStatPermissionString,
 };
