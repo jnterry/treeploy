@@ -20,4 +20,5 @@ describe('treeploy', () => {
 	importTest('deploy_copy');
 	importTest('deploy_tree_yaml');
 	importTest('deploy_dot_file');
+	importTest('deploy_mixed');
 });
