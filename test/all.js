@@ -19,4 +19,5 @@ describe('treeploy', () => {
 	importTest('file_utils');
 	importTest('deploy_copy');
 	importTest('deploy_tree_yaml');
+	importTest('deploy_dot_file');
 });

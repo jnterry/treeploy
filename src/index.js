@@ -104,7 +104,7 @@ function treeploy(input_path, output_path, options){
 		}
 
 		// Check if file is special case
-		if(rel.file.match(/.dot$/)){
+		if(rel.file.match(/^.+\.dot$/)){
 			// then its a dot template, process it before outputing
 			console.log("Processing dot template: " + rel.path);
 			processDotFile(input_path, output_path, rel.path, options.dot_models.it)
