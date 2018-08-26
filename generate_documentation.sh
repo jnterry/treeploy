@@ -12,6 +12,6 @@ rm -rf ${SCRIPTDIR}/docs/
 
 $SCRIPTDIR/node_modules/jsdoc/jsdoc.js \
 		${SCRIPTDIR}/src/ \
-		-R ${SCRIPTDIR}/README.org \
+		-R ${SCRIPTDIR}/README.md \
 		-d ${SCRIPTDIR}/docs/ \
 		-t ${SCRIPTDIR}/node_modules/minami \

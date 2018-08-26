@@ -56,7 +56,9 @@ The dot template engine will be passed variables produced from so called paramet
 
 ## tree.yaml
 
-Any files named `tree.yaml` within the input tree will be parsed in order to produce a set of files or directories in the output tree. This configuration may also specify the owner, group and mode of created files. When re-deploying to an existing output tree:
+Any files named `tree.yaml` within the input tree will be parsed in order to produce a set of files or directories in the output tree. Files named `tree.yaml.dot` will first be processed by the dot template engine, and then treated as outlined below.
+
+This configuration may also specify the owner, group and mode of created files. When re-deploying to an existing output tree:
 - Existing files' contents will not be changed
 - Existing files or directories WILL have their permissions updated, if they are specified in the `tree.yaml` configuration
 
