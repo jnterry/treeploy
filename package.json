@@ -1,16 +1,18 @@
 {
-  "name": "stack-management",
-  "version": "1.0.0",
-  "description": "Utilities for managing deployments of docker stacks",
-  "main": "''",
-  "directories": {
-    "test": "test"
-  },
+  "name": "treeploy",
+  "version": "0.0.1",
+  "description": "Directory tree deployment script",
+	"homepage": "https://github.com/jnterry/treeploy"
+  "main": "src/treeploy.js",
+	"repository": {
+		"type": "git",
+		"url": "git://github.com/jnterry/treeploy.git"
+	},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Jamie Terry",
-  "license": "ISC",
+  "license": "MIT",
 	"dependencies": {
 		"readline-sync": "1.4.9",
 		"walk": "2.3.14",

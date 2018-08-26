@@ -1,0 +1,5 @@
+* Treeploy
+
+	Directory tree deployment made easy...
+
+	Treeploy can be used to create a directory tree from some other, with additional processing of [[http://olado.github.io/doT/index.html][dot.js]] templates, and custom 'tree.yaml' files which can be used to describe a set of empty files and/or directories and the associated permissions, thus getting around the issue of being unable to add empty directories to git.
