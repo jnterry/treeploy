@@ -4,10 +4,10 @@
 
 const fs         = require('fs');
 const walk       = require('walk');
-const execFile   = require('child_process').execFile;
-const mkdirp     = require('mkdirp');
+const mkdirp     = require('mkdirp').sync;
 const yaml       = require('node-yaml');
 const dot_engine = require('dot');
+const Q          = require('q');
 
 const file_utils = require('./file_utils.js');
 
@@ -25,7 +25,48 @@ dot_engine.templateSettings = {
   selfcontained : false,
 };
 
+
+function getRelativePaths(input_path, entry_path, entry_name){
+	if(!entry_path.startsWith(input_path)){
+		console.error("Unexpected entry outside of input directory: "
+								+ root_path + "/" + stat.name);
+		process.exit(1);
+	}
+
+	// relative paths -> relative to both input_path and output_path
+	let rel = {
+		dir  : entry_path.substring(input_path.length+1),
+		file : entry_name,
+		path : null,
+	};
+
+	if(rel.dir.length != 0){
+		rel.path = rel.dir + '/' + rel.file;
+	} else {
+		rel.path = rel.file;
+	}
+
+	return rel;
+}
+
+/**
+ * Performs treeploy process
+ * @param {string} input_path  - Path to the input tree
+ * @param {string} output_path - Path to the output tree
+ * @param {Object} options     - Additional options for treeploy
+ *
+ * @return Promise which resolves to true once all operations have completed,
+ * else a promise which is rejected
+ */
 function treeploy(input_path, output_path, options){
+	let deferred = Q.defer();
+
+	if(!input_path.endsWith ('/')) { input_path  += '/'; }
+	if(!output_path.endsWith('/')) { output_path += '/'; }
+
+	if(!fs.existsSync(output_path)){
+		mkdirp(output_path);
+	}
 
 	console.log("Processing directory...");
 
@@ -33,57 +74,47 @@ function treeploy(input_path, output_path, options){
 
 	let tree_yamls = [];
 
+	walker.on("directory", function(root_path, stat, next){
+		let rel = getRelativePaths(input_path, root_path, stat.name);
+		console.log("Making directory: " + rel.path);
+		fs.mkdirSync(output_path + rel.path);
+		file_utils.syncFileMetaData(input_path + rel.path, output_path + rel.path);
+		next();
+	});
+
 	walker.on("file", function(root_path, stat, next) {
-		if(!root_path.startsWith(input_path)){
-			console.error("Unexpected input file outside of input directory: "
-									+ root_path + "/" + stat.name);
-			process.exit(1);
-		}
+		let rel = getRelativePaths(input_path, root_path, stat.name);
 
-		// relative paths -> relative to both input_path and output_path
-		let rel_dir  = root_path.substring(input_path.length+1);
-		let rel_file = stat.name;
-		let rel_path = null;
-		if(rel_dir.length != 0){
-			rel_path = rel_dir + '/' + rel_file;
-		} else {
-			rel_path = rel_file;
-		}
-
-		if(rel_file.match(/^#.*#$|^.#|.*~$/)){
-			console.log("Skipping emacs backup file: " + rel_path);
+		if(rel.file.match(/^#.*#$|^.#|.*~$/)){
+			console.log("Skipping emacs backup file: " + rel.path);
 			next();
 			return;
 		}
 
 		// Create the directory in the output
-		if(fs.existsSync(output_path + rel_dir)){
-			if(!fs.statSync(output_path + rel_dir).isDirectory()){
-				console.log("Removing existing file: " + output_path + rel_dir);
+		if(fs.existsSync(output_path + rel.dir)){
+			if(!fs.statSync(output_path + rel.dir).isDirectory()){
+				console.log("Removing existing file: " + output_path + rel.dir);
 				fs.unlinkSync(output_path);
 			}
 		}
-		if(!fs.existsSync(output_path + rel_dir)){
-			console.log("Creating directory: " + output_path + rel_dir);
-			mkdirp.sync(output_path + rel_dir);
+		if(!fs.existsSync(output_path + rel.dir)){
+			console.log("Creating directory: " + output_path + rel.dir);
+			mkdirp(output_path + rel.dir);
 		}
 
 		// Check if file is special case
-		if(rel_file.match(/.dot$/)){
+		if(rel.file.match(/^.+\.dot$/)){
 			// then its a dot template, process it before outputing
-			console.log("Processing dot template: " + rel_path);
-			processDotFile(input_path, output_path, rel_path, options.dot_models.it)
-		} else if (rel_file.match(/^tree.ya?ml$/)){
+			console.log("Processing dot template: " + rel.path);
+			processDotFile(input_path, output_path, rel.path, options.dot_models.it)
+		} else if (rel.file.match(/^tree.ya?ml$/)){
 			// then defer execution of the tree.yaml until the end
-			tree_yamls.push({ input_path, output_path, rel_path, rel_dir });
+			tree_yamls.push({ input_path, output_path, rel });
 		} else {
-			console.log("Copying file to " + output_path + rel_path);
-			execFile('/bin/cp', ['--no-target-directory',
-													 '--preserve', // keep owner, permissions, filestamp, etc
-													 input_path + rel_path,
-													 output_path + rel_path
-			]
-			);
+			console.log("Copying file to " + output_path + rel.path);
+			fs.copyFileSync(input_path + rel.path, output_path + rel.path);
+			file_utils.syncFileMetaData(input_path + rel.path, output_path + rel.path);
 		}
 
 		next();
@@ -91,10 +122,13 @@ function treeploy(input_path, output_path, options){
 
 	walker.on('end', function(){
 		for(let job of tree_yamls){
-			console.log("Creating tree described by: " + job.rel_path);
-			processTreeYaml(job.input_path + job.rel_path, job.output_path + job.rel_dir);
+			console.log("Creating tree described by: " + job.rel.path);
+			processTreeYaml(job.input_path + job.rel.path, job.output_path + job.rel.dir);
 		}
+		deferred.resolve(true);
 	});
+
+	return deferred.promise;
 }
 
 /**
@@ -131,7 +165,9 @@ function processDotFile(input_path, output_path, rel_path, dot_vars){
  * files and directories in the root directory
  */
 function processTreeYaml(input_file, output_root_dir){
-	let tree = yaml.readSync(input_file);
+	// yaml.readSync() will do this in one call, but that's not compatible
+	// with the mock file system used for unit tests
+	let tree = yaml.parse(fs.readFileSync(input_file).toString('utf8'));
 
 	if(!output_root_dir.endsWith('/')){
 		output_root_dir += '/';

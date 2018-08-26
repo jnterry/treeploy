@@ -1,13 +1,17 @@
 language: node_js
 
 node_js:
-  - stable
+  - node
+  - lts/*
 
 install:
   - npm install
 
 script:
-  - npm run cover
+  # We want to run as root so manipulating file permissions etc works
+  # ... but travis installs npm locally to the user 'travis' rather
+  # that into root's PATH, -E preserves current user's environement variables
+  - sudo -E env "PATH=$PATH" npm run cover
 
 # Send coverage data to Coveralls
 after_script: "cat coverage/lcov.info | node_modules/coveralls/bin/coveralls.js"
