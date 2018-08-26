@@ -1,6 +1,6 @@
 * Treeploy
 
-	[[file:https://travis-ci.org/jnterry/treeploy.svg?branch=master ]][[file:https://coveralls.io/repos/github/jnterry/org-parser/badge.svg?branch=master]]
+	[[https://travis-ci.org/jnterry/treeploy][https://travis-ci.org/jnterry/treeploy.svg?branch=master]] [[https://coveralls.io/github/jnterry/treeploy][https://coveralls.io/repos/github/jnterry/treeploy/badge.svg?branch=master]]
 
 	Directory tree deployment made easy...
 
