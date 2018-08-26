@@ -7,6 +7,8 @@
 const expect     = require('chai').expect;
 const mockfs     = require('mock-fs');
 const fs         = require('fs');
+const os         = require("os");
+const execSync   = require('child_process').execSync;
 
 const file_utils = require('../src/file_utils.js');
 
@@ -112,6 +114,23 @@ describe('applyFilePermissions', () => {
 		expect(stats.uid).is.deep.equal(3333);
 		expect(stats.gid).is.deep.equal(4444);
 		expect(file_utils.getStatPermissionString(stats)).is.deep.equal('0666');
+	});
+
+	it('Can set owner and group by string', () => {
+		let username   = execSync('id -un').toString('utf8').trim();
+		let group_name = execSync('id -gn').toString('utf8').trim();
+
+		let uid = parseInt(execSync('id -u').toString('utf8').trim());
+		let gid = parseInt(execSync('id -g').toString('utf8').trim());
+
+		file_utils.applyFilePermissions('test.txt', {
+			owner: username,
+			group: group_name,
+		});
+
+		let stats = fs.statSync('test.txt');
+		expect(stats.uid).is.deep.equal(uid);
+		expect(stats.gid).is.deep.equal(gid);
 	});
 });
 
