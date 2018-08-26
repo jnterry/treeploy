@@ -18,4 +18,5 @@ function importTest(name, path){
 describe('treeploy', () => {
 	importTest('file_utils');
 	importTest('deploy_copy');
+	importTest('deploy_tree_yaml');
 });

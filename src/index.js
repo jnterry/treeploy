@@ -110,12 +110,7 @@ function treeploy(input_path, output_path, options){
 			processDotFile(input_path, output_path, rel.path, options.dot_models.it)
 		} else if (rel.file.match(/^tree.ya?ml$/)){
 			// then defer execution of the tree.yaml until the end
-			tree_yamls.push({
-				input_path  : input_path,
-				output_path : output_path,
-				rel_path    : rel.path,
-				rel_dir     : rel.dir
-			});
+			tree_yamls.push({ input_path, output_path, rel });
 		} else {
 			console.log("Copying file to " + output_path + rel.path);
 			fs.copyFileSync(input_path + rel.path, output_path + rel.path);
@@ -170,7 +165,9 @@ function processDotFile(input_path, output_path, rel_path, dot_vars){
  * files and directories in the root directory
  */
 function processTreeYaml(input_file, output_root_dir){
-	let tree = yaml.readSync(input_file);
+	// yaml.readSync() will do this in one call, but that's not compatible
+	// with the mock file system used for unit tests
+	let tree = yaml.parse(fs.readFileSync(input_file).toString('utf8'));
 
 	if(!output_root_dir.endsWith('/')){
 		output_root_dir += '/';
