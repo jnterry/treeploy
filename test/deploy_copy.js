@@ -115,3 +115,71 @@ it('Deploy to new directory', () => {
 			mockfs.restore();
 		});
 });
+
+it('Deploy to new directory whose parent does not exist', () => {
+	mockfs({
+		source : source_directory
+	});
+
+	return treeploy('source', 'target/nested')
+		.then(() => {
+			assertDirectoryCorrect('target/nested');
+		})
+		.finally(() => {
+			mockfs.restore();
+		});
+});
+
+it('Deploy to existing empty directory', () => {
+	mockfs({
+		source : source_directory
+	});
+
+	fs.mkdirSync('target');
+
+	return treeploy('source', 'target')
+		.then(() => {
+			assertDirectoryCorrect('target');
+		})
+		.finally(() => {
+			mockfs.restore();
+		});
+});
+
+it('Deploy to non-empty directory without confilicting files', () => {
+	mockfs({
+		source : source_directory
+	});
+
+	fs.mkdirSync('target');
+	fs.writeFileSync('target/old_file.txt', "text\ngoes\nhere");
+
+	return treeploy('source', 'target')
+		.then(() => {
+			assertDirectoryCorrect('target');
+
+			// check non conflicting file still exists and has not been modified
+			expect(fs.existsSync('target/old_file.txt')).is.true;
+			expect(fs.readFileSync('target/old_file.txt').toString('utf8')).is.deep.equal('text\ngoes\nhere');
+		})
+		.finally(() => {
+			mockfs.restore();
+		});
+});
+
+it('Deploy to non-empty directory with confilicting files', () => {
+	mockfs({
+		source : source_directory
+	});
+
+	fs.mkdirSync('target');
+	fs.writeFileSync('target/hello.txt', "text\ngoes\nhere");
+
+	return treeploy('source', 'target')
+		.then(() => {
+			assertDirectoryCorrect('target');
+		})
+		.finally(() => {
+			mockfs.restore();
+		});
+});
