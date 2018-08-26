@@ -107,9 +107,11 @@ it('Deploy to new directory', () => {
 		source : source_directory
 	});
 
-	treeploy('source', 'target');
-
-	assertDirectoryCorrect('target');
-
-	mockfs.restore();
+	return treeploy('source', 'target')
+		.then(() => {
+			assertDirectoryCorrect('target');
+		})
+		.finally(() => {
+			mockfs.restore();
+		});
 });

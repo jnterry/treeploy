@@ -4,10 +4,10 @@
 
 const fs         = require('fs');
 const walk       = require('walk');
-const execFile   = require('child_process').execFile;
 const mkdirp     = require('mkdirp');
 const yaml       = require('node-yaml');
 const dot_engine = require('dot');
+const Q          = require('q');
 
 const file_utils = require('./file_utils.js');
 
@@ -25,7 +25,18 @@ dot_engine.templateSettings = {
   selfcontained : false,
 };
 
+/**
+ * Performs treeploy process
+ * @param {string} input_path  - Path to the input tree
+ * @param {string} output_path - Path to the output tree
+ * @param {Object} options     - Additional options for treeploy
+ *
+ * @return Promise which resolves to true once all operations have completed,
+ * else a promise which is rejected
+ */
 function treeploy(input_path, output_path, options){
+	let deferred = Q.defer();
+
 	if(!input_path.endsWith ('/')) { input_path  += '/'; }
 	if(!output_path.endsWith('/')) { output_path += '/'; }
 
@@ -80,12 +91,8 @@ function treeploy(input_path, output_path, options){
 			tree_yamls.push({ input_path, output_path, rel_path, rel_dir });
 		} else {
 			console.log("Copying file to " + output_path + rel_path);
-			execFile('/bin/cp', ['--no-target-directory',
-													 '--preserve', // keep owner, permissions, filestamp, etc
-													 input_path + rel_path,
-													 output_path + rel_path
-			]
-			);
+			fs.copyFileSync(input_path + rel_path, output_path + rel_path);
+			file_utils.syncFileMetaData(input_path + rel_path, output_path + rel_path);
 		}
 
 		next();
@@ -96,7 +103,10 @@ function treeploy(input_path, output_path, options){
 			console.log("Creating tree described by: " + job.rel_path);
 			processTreeYaml(job.input_path + job.rel_path, job.output_path + job.rel_dir);
 		}
+		deferred.resolve(true);
 	});
+
+	return deferred.promise;
 }
 
 /**
