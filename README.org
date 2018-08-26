@@ -1,3 +1,10 @@
+* NOTE -> CURRENTLY IN PRE-RELEASE
+
+	The API and CLI should not be considered stable.
+
+	[[https://github.com/jnterry/treeploy/milestone/1][See this list for tasks to complete before 1.0.0]]
+
+
 * Treeploy - Directory tree deployment made easy
 
 	[[https://travis-ci.org/jnterry/treeploy][https://travis-ci.org/jnterry/treeploy.svg?branch=master]] [[https://coveralls.io/github/jnterry/treeploy][https://coveralls.io/repos/github/jnterry/treeploy/badge.svg?branch=master]]
