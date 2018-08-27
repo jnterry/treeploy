@@ -42,59 +42,17 @@ if(process.getuid() != 0){
 
 
 /////////////////////////////////////////////////////////
-// Check input path exists and is a directory
-if(!fs.existsSync(input_path)){
-	console.error("Input path does not exist");
-	process.exit(1);
-} else {
-	let in_stat = fs.statSync(input_path);
-
-	if(!in_stat.isDirectory()){
-		console.error("Input path is not a directory");
-		process.exit(1);
-	}
-}
-/////////////////////////////////////////////////////////
-
-
-
-/////////////////////////////////////////////////////////
 // Check output does not exist, or if it does prompt user
 // if they want to continue
 if(fs.existsSync(output_path)){
 	let out_stat = fs.statSync(output_path);
 
-	if(out_stat.isFile()){
-		console.log("The output path: '" + output_path +
-								 "' is a file and must be deleted to continue");
+	console.log("The output path already exists, it, or its decendents may be overwritten");
 
-		let response = stdin.question("Continue? [y/N] ");
-		if(response.match('[Yy]|[Yy][Ee][Ss]')){
-			fs.unlinkSync(output_path);
-		} else {
-			process.exit(0);
-		}
-	} else if (out_stat.isDirectory()){
-		let contents = fs.readdirSync(output_path);
-		if(contents.length != 0){
-			console.log("Output path is a non empty directory!");
-			console.log(" - Files in source and destination will be overwritten");
-			console.log(" - Files in destination but not in source will be untouched");
-			console.log(" - Files in source but not in destination will be created\n");
-			let response = stdin.question("Continue? [y/N] ");
-			if(!response.match('[Yy]|[Yy][Ee][Ss]')){
-				process.exit(0);
-			}
-		}
-	} else {
-		console.log("Output path exists, but is not a file or directory");
-		console.log("Don't know what to do, quiting...");
-		process.exit(1);
+	let response = stdin.question("Continue? [y/N] ");
+	if(!response.match('[Yy]|[Yy][Ee][Ss]')){
+		process.exit(0);
 	}
-} else {
-	console.log("Creating output directory: " + output_path);
-	mkdirp(output_path);
-	file_utils.syncFileMetaData(input_path, output_path);
 }
 /////////////////////////////////////////////////////////
 
