@@ -10,7 +10,7 @@ const stdin      = require('readline-sync')
 const yaml       = require('node-yaml');
 const parseArgs  = require('minimist');
 
-const treeploy   = require('./index.js');
+const treeploy   = require('../');
 
 /////////////////////////////////////////////////////////
 // Parse inputs
