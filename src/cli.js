@@ -42,6 +42,7 @@ function treeploy_cli(arg_list){
 	try {
 		// cut off the input and output path, then parse remaining arguments
 		options = parseOptionalArguments(arg_list.splice(2));
+		if(options == null){ return Q(0); }
 	} catch (e) {
 		log.error(e.message);
 		printUsage();
@@ -80,12 +81,17 @@ function treeploy_cli(arg_list){
 	}
 	/////////////////////////////////////////////////////////
 
+
+
+	/////////////////////////////////////////////////////////
+	// Run treeploy
 	return treeploy(input_path, output_path, options)
 		.then(() => 0)
 		.catch((e) => {
 			log.error(e.message);
 			return Q(1)
 		});
+	/////////////////////////////////////////////////////////
 }
 
 function printUsage(){
@@ -154,7 +160,7 @@ function parseOptionalArguments(arg_list){
 				break;
 			case '-h': // this must have been in a combined argument, eg -vh, so not be caught already
 				displayHelp();
-				return Q(0);
+				return null;
 			case '--noroot'    : options.noroot    = true; break;
 			case '--overwrite' : options.overwrite = true; break;
 

@@ -84,8 +84,36 @@ it('If we specify --help then nothing gets done', () => {
 
 	return treeploy_cli(['source', 'target', '--help'])
 		.then((exit_code) => {
-			expectNone('target');
 			expect(exit_code).is.deep.equal(0);
+			expectNone('target');
+		}).finally(() => {
+			mockfs.restore();
+		});
+});
+
+it('-h can be specified without IO paths', () => {
+	mockfs({
+		source : source_structure,
+	});
+
+	return treeploy_cli(['-h'])
+		.then((exit_code) => {
+			expect(exit_code).is.deep.equal(0);
+			expectNone('target');
+		}).finally(() => {
+			mockfs.restore();
+		});
+});
+
+it('If we specify -h then nothing gets done', () => {
+	mockfs({
+		source : source_structure,
+	});
+
+	return treeploy_cli(['source', 'target', '-vhvv'])
+		.then((exit_code) => {
+			expect(exit_code).is.deep.equal(0);
+			expectNone('target');
 		}).finally(() => {
 			mockfs.restore();
 		});
@@ -105,12 +133,40 @@ it('Specifing no arguments causes bad exit code', () => {
 		});
 });
 
+it('Specifing flag before IO paths causes bad exit code', () => {
+	mockfs({
+		source : source_structure,
+	});
+
+	return treeploy_cli(['--noroot', 'source', 'target'])
+		.then((exit_code) => {
+			expect(exit_code).is.deep.equal(1);
+			expectNone('target');
+		}).finally(() => {
+			mockfs.restore();
+		});
+});
+
 it('Specifing only source causes bad exit code', () => {
 	mockfs({
 		source : source_structure,
 	});
 
 	return treeploy_cli([])
+		.then((exit_code) => {
+			expect(exit_code).is.deep.equal(1);
+			expectNone('target');
+		}).finally(() => {
+			mockfs.restore();
+		});
+});
+
+it('Invalid flags causes bad exit code', () => {
+	mockfs({
+		source : source_structure,
+	});
+
+	return treeploy_cli(['source', 'target', '--badflag'])
 		.then((exit_code) => {
 			expect(exit_code).is.deep.equal(1);
 			expectNone('target');
