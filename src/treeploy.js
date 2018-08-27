@@ -7,22 +7,52 @@
 
 const fs         = require('fs');
 const stdin      = require('readline-sync')
-const mkdirp     = require('mkdirp').sync;
 const yaml       = require('node-yaml');
+const parseArgs  = require('minimist');
 
-const file_utils = require('./file_utils.js');
 const treeploy   = require('./index.js');
 
 /////////////////////////////////////////////////////////
-// Get and santize inputs
-// [0] is node executable, [1] is this script
-let input_path    = process.argv[2];
-let output_path   = process.argv[3];
-let dot_vars_file = process.argv[4];
+// Parse inputs
+let argv = parseArgs(process.argv.slice(2), {
+	alias: {
+		warn  : ['v', 'verbose'],
+		debug : [],
+		help  : ['h'],
+	},
+});
+/////////////////////////////////////////////////////////
+
+
+
+/////////////////////////////////////////////////////////
+// Display help
+if(argv.help){
+	displayHelpAndTerminate();
+}
+/////////////////////////////////////////////////////////
+
+
+
+/////////////////////////////////////////////////////////
+// Process inputs
+let options = {
+	verbosity: 0,
+};
+let input_path    = argv['_'][0];
+let output_path   = argv['_'][1];
+let dot_vars_file = argv['_'][2];
 
 if(input_path == null || output_path == null){
 	console.log("Usage: build_appdata.js INPUT_PATH OUTPUT_PATH [DOT_VARS_FILE]");
 	process.exit(1);
+}
+
+if(argv.verbose){
+	options.verbosity = 1;
+}
+if(argv.debug){
+	options.verbosity = 2;
 }
 /////////////////////////////////////////////////////////
 
@@ -88,4 +118,19 @@ treeploy(
 			it: dot_vars,
 		}
 	}
-);
+).done();
+
+
+function displayHelpAndTerminate(){
+	console.log(`
+Usage:
+  treeploy INPUT_PATH OUTPUT_PATH [DOT_VARS_FILE] [options]
+
+Options:
+
+  -v  --verbose,--warn  Enables printing of warnings
+      --debug           Enables printing of debug messages, implies --verbose
+  -h  --help            Display this help infomation
+`);
+	process.exit(0);
+}
