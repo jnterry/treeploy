@@ -1,6 +1,6 @@
 {
   "name": "treeploy",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Directory tree deployment script",
 	"homepage": "https://github.com/jnterry/treeploy",
   "main": "src/index.js",
