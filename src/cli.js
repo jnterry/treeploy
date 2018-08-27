@@ -10,6 +10,7 @@ const stdin      = require('readline-sync')
 const yaml       = require('node-yaml');
 const parseArgs  = require('minimist');
 const path       = require('path');
+const Q          = require('q');
 
 const treeploy   = require('./index.js');
 
@@ -17,7 +18,7 @@ function treeploy_cli(arg_list){
 
 	/////////////////////////////////////////////////////////
 	// Parse inputs
-	let argv = parseArgs(process.argv.slice(2), {
+	let argv = parseArgs(arg_list, {
 		alias: {
 			warn      : ['v', 'verbose'],
 			debug     : [],
@@ -51,7 +52,7 @@ function treeploy_cli(arg_list){
 
 	if(input_path == null || output_path == null){
 		console.log("Usage: build_appdata.js INPUT_PATH OUTPUT_PATH [DOT_VARS_FILE]");
-		process.exit(1);
+		return Q(1);
 	}
 
 	if(argv.verbose){ options.verbosity = 1; }
@@ -67,7 +68,7 @@ function treeploy_cli(arg_list){
 		console.log('Not running as root, may not be able set file permissions, owners, etc');
 		let response = stdin.question('Continue? [y/N]');
 		if(!response.match('[Yy]|[Yy][Ee][Ss]')){
-			process.exit(0);
+			return Q(0);
 		}
 	}
 	/////////////////////////////////////////////////////////
@@ -84,7 +85,7 @@ function treeploy_cli(arg_list){
 
 		let response = stdin.question("Continue? [y/N] ");
 		if(!response.match('[Yy]|[Yy][Ee][Ss]')){
-			process.exit(0);
+			return Q(0);
 		}
 	}
 	/////////////////////////////////////////////////////////
@@ -97,7 +98,7 @@ function treeploy_cli(arg_list){
 	if(dot_vars_file != null){
 		if(!fs.existsSync(dot_vars_file)){
 			console.error("Specified dot vars file does not exist");
-			process.exit(1);
+			return Q(1);
 		}
 		if(dot_vars_file.endsWith('.yaml') || dot_vars_file.endsWith('.yaml')){
 			dot_vars = yaml.readSync(dot_vars_file);
@@ -114,7 +115,7 @@ function treeploy_cli(arg_list){
 	/////////////////////////////////////////////////////////
 
 
-	return treeploy(input_path, output_path, options);
+	return treeploy(input_path, output_path, options).then(() => 0);
 }
 
 
