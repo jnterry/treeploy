@@ -11,7 +11,6 @@ const yaml        = require('node-yaml');
 const parseArgs   = require('minimist');
 const path        = require('path');
 const Q           = require('q');
-const eval_module = require('eval');
 
 const treeploy    = require('./index.js');
 
@@ -103,27 +102,52 @@ function printUsage(){
 function displayHelp(){
 	console.log(`
 Usage:
-  treeploy INPUT_PATH OUTPUT_PATH [DOT_VARS_FILE] [options]
+  treeploy INPUT_PATH OUTPUT_PATH [options]
 
 Options:
 
-  -v  --verbose          Increases verbosity level, can be specified between 0 and 3 times for:
-                           0 : errors only
-                           1 : above and warnings
-                           2 : above and info/debug messages
-                           3 : above and trace messages
-
-      --overwrite        Disable CLI nag that destination path exists, always overwrites
-      --noroot           Disable CLI nag that we are running as non-root, run anyway
-
-      --model <param>    Sets a particular field of the model pass to doT templates
-                           <param> should be of the format 'model.field.name=value'
-                           value will be interpreted as a string, unless it can be
-                           parsed as either a float or integer. This behaviour can
-                           be disabled by using quotes, for example: model.number=\'123\'
-
-
-  -h  --help             Display this help infomation
++=====================#========================================================+
+| -v, --verbose       | Increases verbosity level                              |
+|                     | Can be used multiple times with the following effects: |
+|                     |   0 : errors only                                      |
+|                     |   1 : above and warnings                               |
+|                     |   2 : above and info/debug messages                    |
+|                     |   3 : above and trace messages                         |
+|=====================#========================================================#
+| --overwrite         | Disable CLI nag when the destination path exists.      |
+|                     | The program will overwrites any conflicting paths      |
++---------------------+--------------------------------------------------------+
+| --noroot            | Disable CLI nag when running as user other than root   |
+|                     | Program may fail to set permissions on files           |
+|=====================#========================================================#
+| --model <param>     | Sets a field of the model passed to doT templates      |
+|                     |                                                        |
+|                     | Conceptually the model should be thought of as a JSON  |
+|                     | object that is accessable globally in the dot template |
+|                     |                                                        |
+|                     | <param> should be of the form: 'field.name=value'      |
+|                     |                                                        |
+|                     | 'value' will be parsed as a string, unless it can be   |
+|                     | parsed as a float or integer; this can be prevented    |
+|                     | using quotes, for example: model.number=\'123\'        |
+|                     |                                                        |
+|                     | Example: --model host.ip=$(curl https://api.ipify.org/)|
++---------------------+--------------------------------------------------------+
+| --modelfile <param> | Loads a yaml or json file and merges the loaded data   |
+|                     | into the currently loaded model                        |
+|                     |                                                        |
+|                     | <param> should be of the format 'field.name=file_path' |
+|                     |                                                        |
+|                     | Alternatively <param> can just be a filename, in which |
+|                     | case it be loaded and merged into the whole model      |
++---------------------+--------------------------------------------------------+
+| --modelcmd <param>  | Executes some command, parse it's stdout as JSON and   |
+|                     | then treats it as with data loaded by --modelfile      |
+|                     |                                                        |
+|                     | :TOOD: param format                                    |
++=====================#=========================================================
+| -h, --help          | Display this help infomation
++====+================#=========================================================
 	`);
 }
 
@@ -202,7 +226,7 @@ function parseOptionalArguments(arg_list){
  * @param {string} value - The argument to the --modelfile CLI flag, should be
  * of the form 'model.field=./filename.json' or './filename.json', in later case
  * entire options.dot_models variable will be set to file contents
- * File to load must have one of following extensions: .js, .json, .yaml or .yml
+ * File to load must have one of following extensions: .json, .yaml or .yml
  *
  * @param {object} options - Current state of parsed options, this will be
  * modified to reflect new options with additional model field
@@ -228,9 +252,9 @@ function loadModelFile(value, options){
 
 	let extension = file_name.split('.').pop();
 
-	if(['yaml', 'yml', 'js', 'json'].indexOf(extension) < 0){
+	if(['yaml', 'yml', 'json'].indexOf(extension) < 0){
 		throw new Error(
-			"Model file must have one of following extensions: .js, .json. .yaml, .yml"
+			"Model file must have one of following extensions: .json. .yaml, .yml"
 		);
 	}
 
@@ -240,37 +264,17 @@ function loadModelFile(value, options){
 		);
 	}
 
-	let loaded_data = null;
+	let content = fs.readFileSync(file_name);
 
+	let loaded_data = null;
 	try {
 		switch(extension){
-			case 'yaml':
-			case 'yml': {
-				let content = fs.readFileSync(file_name);
-				loaded_data = yaml.parse(content);
-				break;
-			}
-			case 'json': {
-				let content = fs.readFileSync(file_name);
-				loaded_data = JSON.parse(content);
-				break;
-			}
-			case 'js':
-				try {
-					// standard require(...) does not work in context of test cases,
-					// nor when compiled using pkg -> hence we load the module source
-					// and eval it
-					// :TODO: -> can we load a module which require(...)'s a module?
-					let content = fs.readFileSync(file_name);
-					loaded_data = eval_module(content);
-				} catch (e) {
-					console.log(e);
-					throw new Error('Error evaluating js module: ' + e.toString());
-				}
-				break;
+			case 'yaml' : loaded_data = yaml.parse(content); break;
+			case 'yml'  : loaded_data = yaml.parse(content); break;
+			case 'json' : loaded_data = JSON.parse(content); break;
 		}
 	} catch (e) {
-		throw new Error("Failed to load modelfile '" + file_name + "': " + e.message);
+		throw new Error("Failed to parse modelfile '" + file_name + "': " + e.message);
 	}
 
 	setModelField(model_path, loaded_data, options);

@@ -81,10 +81,6 @@ runTestExpectError(
 	'Malformed json will cause non-zero exit code',
 	'test.json', ':::',
 	['--modelfile', '=test.json']);
-runTestExpectError(
-	'Error in js script will cause non-zero exit code',
-	'test.js', 'throw new Error("A nasty error");',
-	['--modelfile', '=./test.js']);
 
 runTestExpectSuccess(
 	'Single yaml for all',
@@ -102,18 +98,15 @@ data:
 );
 
 runTestExpectSuccess(
-	'Single js for specified model',
-	'data.js',
-	'module.exports = { name: "JsPerson", age: 3 + 5 };',
-	['--modelfile', 'data=data.js'],
-	{
-		name: 'JsPerson',
-		age: 8
-	}
+	'Single yaml for specified field',
+	'data.yaml',
+	'a: 3\nb: 5',
+	['--modelfile', 'data=data.yaml'],
+	{ a: 3, b: 5 }
 );
 
 runTestExpectSuccess(
-	'Single json for specified model field',
+	'Single json for specified sub-field',
 	'data.json',
 	'{ "name": "Tim", "age": 32 }',
 	['--modelfile', 'data.person=data.json'],
