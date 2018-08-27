@@ -16,10 +16,12 @@ const treeploy   = require('./index.js');
 // Parse inputs
 let argv = parseArgs(process.argv.slice(2), {
 	alias: {
-		warn  : ['v', 'verbose'],
-		debug : [],
-		trace : [],
-		help  : ['h'],
+		warn      : ['v', 'verbose'],
+		debug     : [],
+		trace     : [],
+		help      : ['h'],
+		overwrite : [],
+		noroot    : [],
 	},
 });
 /////////////////////////////////////////////////////////
@@ -58,7 +60,7 @@ if(argv.trace  ){ options.verbosity = 3; }
 
 /////////////////////////////////////////////////////////
 // Check if we are root
-if(process.getuid() != 0){
+if(!argv.noroot && process.getuid() != 0){
 	console.log('Not running as root, may not be able set file permissions, owners, etc');
 	let response = stdin.question('Continue? [y/N]');
 	if(!response.match('[Yy]|[Yy][Ee][Ss]')){
@@ -72,7 +74,7 @@ if(process.getuid() != 0){
 /////////////////////////////////////////////////////////
 // Check output does not exist, or if it does prompt user
 // if they want to continue
-if(fs.existsSync(output_path)){
+if(!argv.overwrite && fs.existsSync(output_path)){
 	let out_stat = fs.statSync(output_path);
 
 	console.log("The output path already exists, it, or its decendents may be overwritten");
@@ -122,6 +124,10 @@ Options:
       --warn             Enables printing of warnings
   -v  --verbose,--debug  Enables printing of debug messages, implies --warn
       --trace            Enables printing of trace message, implies --debug
+
+      --overwrite        Disable CLI nag that destination path exists, always overwrites
+      --noroot           Disable CLI nag that we are running as non-root, run anyway
+
   -h  --help             Display this help infomation
 `);
 	process.exit(0);
