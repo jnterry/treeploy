@@ -4,27 +4,11 @@
 
 const cli = require('colors/safe');
 
-
-function writeError(str){
-	console.error(cli.red("ERROR | ") + str);
-}
-
-function writeWarning(str){
-	console.log(cli.yellow("WARN  | ") + str);
-}
-
-function writeInfo(str){
-	console.log(cli.cyan("INFO  | " + str));
-}
-
-function writeDebug(str){
-	console.log("DEBUG | " + str);
-}
-
-function writeTrace(str){
-	console.log(cli.grey("TRACE | " + str));
-}
-
+function writeError  (str){ console.error(cli.red   ("ERROR | ") + str); }
+function writeWarning(str){ console.log  (cli.yellow("WARN  | ") + str); }
+function writeInfo   (str){ console.log  (cli.cyan  ("INFO  | " + str)); }
+function writeDebug  (str){ console.log  (cli.white ("DEBUG | " + str)); }
+function writeTrace  (str){ console.log  (cli.grey  ("TRACE | " + str)); }
 function noop(){}
 
 function makeLogger(level){

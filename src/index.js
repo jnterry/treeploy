@@ -9,6 +9,7 @@ const dot_engine = require('dot');
 const Q          = require('q');
 const path       = require('path');
 
+const makeLogger = require('./log.js')
 const file_utils = require('./file_utils.js');
 
 dot_engine.templateSettings = {
@@ -45,7 +46,11 @@ let log = null;
  * else a promise which is rejected
  */
 function treeploy(source_path, target_path, options){
-	log = require('./log.js')(options.verbosity);
+	if(options == null){
+		options = {};
+	}
+
+	log = makeLogger(options.verbosity || 0);
 
 	return Q(fse
 		.pathExists(source_path)
