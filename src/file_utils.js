@@ -7,6 +7,8 @@
 const userid = require('userid');
 const fs     = require('fs');
 
+require('./log.js');
+
 function getStatPermissionString(stats){
 	return '0' + (stats.mode & parseInt('777', 8)).toString(8);
 }
@@ -38,6 +40,8 @@ function syncFileMetaData(in_path, out_path){
  * @param {(string|number)} options.group - Group name or gid of file's group
  */
 function applyFilePermissions(path, options){
+	log.trace("Updating file permissions for " + path);
+
 	if(options.mode != null){
 		fs.chmodSync(path, parseInt(options.mode, 8));
 	}
@@ -53,9 +57,9 @@ function applyFilePermissions(path, options){
 			if(options.owner === 'root'){
 				uid = 0;
 			} else {
- 				console.log("WARNING: uid's should be prefered over usernames to ensure " +
-										"correct operation on systems where the user does not exist, got: " +
-										options.owner);
+ 				log.warn("uid's should be prefered over usernames to ensure " +
+								 "correct operation on systems where the user does not exist, got: " +
+								 options.owner);
 				uid = userid.uid(options.owner);
 			}
 		} else {
@@ -70,9 +74,9 @@ function applyFilePermissions(path, options){
 			if(options.group === 'root'){
 				gid = 0;
 			} else if(typeof options.group === 'string') {
-				console.log("WARNING: gid's should be prefered over group names to ensure " +
-										"correct operation on systems where the group does not exist, got: " +
-										options.group);
+				log.warn("gid's should be prefered over group names to ensure " +
+								 "correct operation on systems where the group does not exist, got: " +
+								 options.group);
 				gid = userid.gid(options.group);
 			} else {
 				throw new Error("Invalid type for options.group, expected number representing uid or string representing group name");

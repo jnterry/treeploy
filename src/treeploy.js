@@ -7,30 +7,60 @@
 
 const fs         = require('fs');
 const stdin      = require('readline-sync')
-const mkdirp     = require('mkdirp').sync;
 const yaml       = require('node-yaml');
+const parseArgs  = require('minimist');
 
-const file_utils = require('./file_utils.js');
 const treeploy   = require('./index.js');
 
 /////////////////////////////////////////////////////////
-// Get and santize inputs
-// [0] is node executable, [1] is this script
-let input_path    = process.argv[2];
-let output_path   = process.argv[3];
-let dot_vars_file = process.argv[4];
+// Parse inputs
+let argv = parseArgs(process.argv.slice(2), {
+	alias: {
+		warn      : ['v', 'verbose'],
+		debug     : [],
+		trace     : [],
+		help      : ['h'],
+		overwrite : [],
+		noroot    : [],
+	},
+});
+/////////////////////////////////////////////////////////
 
-if(input_path == null || output_path == null){
-	console.log("Usage: build_appdata.js INPUT_PATH OUTPUT_PATH [DOT_VARS_FILE]");
-	process.exit(1);
+
+
+/////////////////////////////////////////////////////////
+// Display help
+if(argv.help){
+	displayHelpAndTerminate();
 }
 /////////////////////////////////////////////////////////
 
 
 
 /////////////////////////////////////////////////////////
+// Process inputs
+let options = {
+	verbosity: 0,
+};
+let input_path    = argv['_'][0];
+let output_path   = argv['_'][1];
+let dot_vars_file = argv['_'][2];
+
+if(input_path == null || output_path == null){
+	console.log("Usage: build_appdata.js INPUT_PATH OUTPUT_PATH [DOT_VARS_FILE]");
+	process.exit(1);
+}
+
+if(argv.verbose){ options.verbosity = 1; }
+if(argv.debug  ){ options.verbosity = 2; }
+if(argv.trace  ){ options.verbosity = 3; }
+/////////////////////////////////////////////////////////
+
+
+
+/////////////////////////////////////////////////////////
 // Check if we are root
-if(process.getuid() != 0){
+if(!argv.noroot && process.getuid() != 0){
 	console.log('Not running as root, may not be able set file permissions, owners, etc');
 	let response = stdin.question('Continue? [y/N]');
 	if(!response.match('[Yy]|[Yy][Ee][Ss]')){
@@ -44,7 +74,7 @@ if(process.getuid() != 0){
 /////////////////////////////////////////////////////////
 // Check output does not exist, or if it does prompt user
 // if they want to continue
-if(fs.existsSync(output_path)){
+if(!argv.overwrite && fs.existsSync(output_path)){
 	let out_stat = fs.statSync(output_path);
 
 	console.log("The output path already exists, it, or its decendents may be overwritten");
@@ -76,16 +106,29 @@ if(dot_vars_file != null){
 		console.error("Specified dot vars file has unrecognised format!");
 		process.exit(1);
 	}
+	options.dot_models.it = dot_vars;
 }
 /////////////////////////////////////////////////////////
 
 
-treeploy(
-	input_path,
-	output_path,
-	{
-		dot_models: {
-			it: dot_vars,
-		}
-	}
-);
+treeploy(input_path, output_path, options).done();
+
+
+function displayHelpAndTerminate(){
+	console.log(`
+Usage:
+  treeploy INPUT_PATH OUTPUT_PATH [DOT_VARS_FILE] [options]
+
+Options:
+
+      --warn             Enables printing of warnings
+  -v  --verbose,--debug  Enables printing of debug messages, implies --warn
+      --trace            Enables printing of trace message, implies --debug
+
+      --overwrite        Disable CLI nag that destination path exists, always overwrites
+      --noroot           Disable CLI nag that we are running as non-root, run anyway
+
+  -h  --help             Display this help infomation
+`);
+	process.exit(0);
+}

@@ -9,6 +9,7 @@ const dot_engine = require('dot');
 const Q          = require('q');
 const path       = require('path');
 
+const makeLogger = require('./log.js')
 const file_utils = require('./file_utils.js');
 
 dot_engine.templateSettings = {
@@ -43,6 +44,12 @@ const file_name_regex = {
  * else a promise which is rejected
  */
 function treeploy(source_path, target_path, options){
+	if(options == null){
+		options = {};
+	}
+
+	global.log = makeLogger(options.verbosity || 0);
+
 	return Q(fse
 		.pathExists(source_path)
 		.catch((err) => {
@@ -62,6 +69,8 @@ function treeploy(source_path, target_path, options){
 }
 
 function treeployDirectory(source_path, target_path, options){
+
+	log.trace('Processing source directory: ' + source_path);
 
 	if(!source_path.endsWith('/')){ source_path += '/'; }
 	if(!target_path.endsWith('/')){ target_path += '/'; }
@@ -93,7 +102,7 @@ function treeployDirectory(source_path, target_path, options){
 							}
 
 						} else {
-							console.log("Skipping: " + source_path + " - neither a directory nor a file");
+							log.warn("Skipping: " + source_path + " - neither a directory nor a file");
 						}
 					})
 				);
@@ -115,14 +124,14 @@ function treeployFile(source_path, target_path, options){
 	if(options != null){ dot_models = options.dot_models; }
 
 	if(file_name.match(file_name_regex.skipped)){
-		console.log("Skipping file: " + source_path);
+		log.info("Skipping file which matches skip regex: " + source_path);
 		return Q(false);
 	}
 
 	if (file_name.match(file_name_regex.tree_descriptor)){
 		// :TODO: make processTreeYaml return a promise :ISSUE6:
 		return Q().then(() => {
-			console.log("Processing tree yaml: " + source_path);
+			log.trace("Processing tree yaml: " + source_path);
 			processTreeYaml(source_path, target_path, dot_models);
 		});
 	}
@@ -130,13 +139,13 @@ function treeployFile(source_path, target_path, options){
 	if(file_name.match(file_name_regex.template)){
 		return Q().then(() => {
 			// :TODO: make processDotFile return a promise :ISSUE6:
-			console.log("Processing dot template: " + source_path);
+			log.trace("Processing dot template: " + source_path);
 			processDotFile(source_path, target_path, dot_models)
 		});
 	}
 
 	// otherwise this is just a standard file...
-	console.log("Copying file " + source_path + " to " + target_path);
+	log.debug("Copying file " + source_path + " to " + target_path);
 	return fse
 		.copy(source_path, target_path)
 		.then(() => {
@@ -163,7 +172,7 @@ function processDotTemplate(template_name, template, dot_vars){
 	} catch (e) {
 		console.error("Failed to process dot template: '" + template_name + "', error follows:");
 		console.dir(e);
-		process.exit(1);
+		throw new Error("Invalid dot template: " + template_name);
 	}
 }
 
@@ -220,10 +229,10 @@ function processTreeYaml(input_file, output_root_dir, dot_vars){
 		}
 
 		if(!Array.isArray(tree)){
-			console.error("Expected an array of directory contents for '" +
-										output_root_dir + "' in: '" + input_file + "', got: ");
+			log.error("Expected an array of directory contents for '" +
+								output_root_dir + "' in: '" + input_file + "', got: ");
 			console.dir(tree);
-			process.exit(1);
+			throw new Error("Invalid tree.yaml file: " + input_file);
 		}
 
 		for(let entry of tree){
@@ -237,9 +246,9 @@ function processTreeYaml(input_file, output_root_dir, dot_vars){
 				let keys = Object.keys(entry);
 
 				if(keys.length !== 1){
-					console.error("Expected single entry name to map to entry options, got: ");
+					log.error("Expected single entry name to map to entry options, got: ");
 					console.dir(entry);
-					process.exit(1);
+					throw new Error("Invalid tree.yaml file: " + input_file);
 				}
 
 				name = keys[0];
@@ -263,7 +272,7 @@ function processTreeYaml(input_file, output_root_dir, dot_vars){
 
 			if(name.endsWith('/')){
 				if(stats != null && !stats.isDirectory()){
-					console.log("Overwritting existing non-directory with directory: " + full_path);
+					log.warn("Overwritting existing non-directory with directory: " + full_path);
 					fs.unlinkSync(full_path);
 				}
 				fse.ensureDirSync(full_path);
@@ -272,11 +281,11 @@ function processTreeYaml(input_file, output_root_dir, dot_vars){
 					fs.writeFileSync(full_path, '');
 				} else {
 					if(!stats.isFile()){
-						console.log("Overwritting existing non-file with file: " + full_path);
+						log.warn("Overwritting existing non-file with file: " + full_path);
 						fs.unlinkSync(full_path);
 						fs.wrteFileSync(full_path, '');
 					} else {
-						console.log("Not overriting existing file: " + full_path);
+						log.debug("Not overwriting existing file: " + full_path);
 					}
 				}
 			}
