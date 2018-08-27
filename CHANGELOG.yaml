@@ -1,12 +1,27 @@
+- v0.3.0:
+    date: '2018-08-28'
+    name: 'CLI Options and Logging'
+    features:
+      - Add support for parsing optargs on CLI
+      - Add improved logging, with different verbosity levels specified by CLI optargs
+      - Add CLI options to disable the nag questions to make program non-interactive
 - v0.2.0:
     date: '2018-08-27'
-    changes:
+    name: 'Single File Mode'
+    features:
       - Add support for operating on single input file rather than an input directory tree
+    minor:
+      - Refactor main loop to be recursive and use promises with fs-extra rather than standard fs module
 - v0.1.0:
     date: '2018-08-26'
-    changes:
+    name: 'Dynamic Trees and Tests'
+    features:
       - Add ability to process tree.yaml.dot files to dynamically generate tree.yaml files and therefore directory structures based on parameters
+    minor:
+      - Add unit tests
+      - Convert project readme into a form that npmjs.com understands
 - v0.0.1:
   date: '2018-08-26'
-  changes:
-    - Initial release
+  name: 'First release'
+  features:
+    - Basic functionality implemented
