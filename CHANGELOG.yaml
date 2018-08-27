@@ -1,9 +1,11 @@
+- v0.2.0:
+    date: '2018-08-27'
+    changes:
+      - Add support for operating on single input file rather than an input directory tree
 - v0.1.0:
     date: '2018-08-26'
     changes:
       - Add ability to process tree.yaml.dot files to dynamically generate tree.yaml files and therefore directory structures based on parameters
-      - Add unit tests
-      - Convert project readme into a form that npmjs.com understands
 - v0.0.1:
   date: '2018-08-26'
   changes:
