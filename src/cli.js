@@ -33,7 +33,7 @@ function treeploy_cli(arg_list){
 
 	if(input_path.startsWith('-') || output_path.startsWith('-')){
 		printUsage();
-		console.log("\nInput and output paths must be first two arguments - place flags after these!");
+		log.error("\nInput and output paths must be first two arguments - place flags after these!");
 		return Q(1);
 	}
 
@@ -42,8 +42,7 @@ function treeploy_cli(arg_list){
 		// cut off the input and output path, then parse remaining arguments
 		options = parseOptionalArguments(arg_list.splice(2));
 	} catch (e) {
-		console.log(e.message);
-		console.log("\n");
+		log.error(e.message);
 		printUsage();
 		return Q(1);
 	}
@@ -80,8 +79,12 @@ function treeploy_cli(arg_list){
 	}
 	/////////////////////////////////////////////////////////
 
-
-	return treeploy(input_path, output_path, options).then(() => 0);
+	return treeploy(input_path, output_path, options)
+		.then(() => 0)
+		.catch((e) => {
+			log.error(e.message);
+			return Q(1)
+		});
 }
 
 function printUsage(){
@@ -104,6 +107,13 @@ Options:
 
       --overwrite        Disable CLI nag that destination path exists, always overwrites
       --noroot           Disable CLI nag that we are running as non-root, run anyway
+
+      --model <param>    Sets a particular field of the model pass to doT templates
+                           <param> should be of the format 'model.field.name=value'
+                           value will be interpreted as a string, unless it can be
+                           parsed as either a float or integer. This behaviour can
+                           be disabled by using quotes, for example: model.number=\'123\'
+
 
   -h  --help             Display this help infomation
 	`);
@@ -146,12 +156,76 @@ function parseOptionalArguments(arg_list){
 				return Q(0);
 			case '--noroot'    : options.noroot    = true; break;
 			case '--overwrite' : options.overwrite = true; break;
+
+				// arguments with parameters
+			case '--modelfile' :
+			case '--model':
+
+				let arg   = arg_list[i+0];
+				let value = arg_list[i+1];
+
+				if(value == null || value.startsWith('-')){
+					throw new Error("Expected value to be specified for argument " +
+													arg + ", got: " + value);
+				}
+				i++;
+
+				switch(arg){
+					case '--modelfile':
+						loadModelFile(value, options);
+						break;
+					case '--model':
+						setModelValue(value, options);
+						break;
+				}
+
+				break;
 			default:
 				throw new Error("Unexpected argument: " + arg_list[i]);
 		}
 	}
 
 	return options;
+}
+
+function loadModelFile(value, options){
+
+}
+
+function setModelValue(value, options){
+	let parts = value.split('=');
+
+	let field_name  = parts[0];
+	let field_value = parts[1];
+
+	if(parts.length != 2 || field_name === ''){
+		throw new Error("--model argument expects value of form 'field.name=value', " +
+										"got: '" + value + "'");
+	}
+
+	if(field_value.match(/^[0-9]+$/)){
+		field_value = parseInt(field_value);
+	} else if(field_value.match(/^(\+|-)?[0-9]*\.[0-9]+$/)){
+		field_value = parseFloat(field_value);
+	} else if((field_value.startsWith("'") && field_value.endsWith("'")) ||
+		 (field_value.startsWith('"') && field_value.endsWith('"'))
+	){
+		// Then a string has been quoted on the command line (this might
+		// be so we don't interpret a string that looks like an int as an
+		// int, but leave it as a string)
+		// Remove the quotes
+		field_value = field_value.substr(1, field_value.length-2);
+	}
+
+	let field_parts = field_name.split('.');
+	let object_node = options.dot_models;
+	for(let i = 0; i < field_parts.length - 1; ++i){
+		if(object_node[field_parts[i]] == null){
+			object_node[field_parts[i]] = {};
+		}
+		object_node = object_node[field_parts[i]];
+	}
+	object_node[field_parts[field_parts.length-1]] = field_value;
 }
 
 module.exports = treeploy_cli;

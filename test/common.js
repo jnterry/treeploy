@@ -28,6 +28,8 @@ function genName(name){
 }
 
 function checkStats(stats, opts){
+	if(opts == null){ return; }
+
 	if(opts.mode != null){
 		expect(file_utils.getStatPermissionString(stats)).is.deep.equal(opts.mode);
 	}

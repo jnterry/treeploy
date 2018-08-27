@@ -101,9 +101,10 @@ function treeployDirectory(source_path, target_path, options){
 							log.info("Removing conflicting non-directory in place of: " + target_path);
 							return fse.remove(target_path);
 						} else {
-							let msg = "Path '" + target_path + "' exists as non-directory and options.overwrite is not set";
-							log.error(msg)
-							throw new Error(msg);
+							throw new Error(
+								"Path '" + target_path +
+								"' exists as non-directory and options.overwrite is not set"
+							);
 						}
 					}
 				})
@@ -201,8 +202,10 @@ function processDotTemplate(template_name, template, dot_vars){
 	try {
 		return output_content = template_function.apply(null, dot_vars);
 	} catch (e) {
-		log.error("Failed to process dot template: '" + template_name + "': " + e.toString());
-		throw e;
+		throw new Error(
+			"Failed to process dot template: '" +
+			template_name + "': " + e.toString()
+		);
 	}
 }
 
@@ -259,11 +262,11 @@ function processTreeYaml(input_file, output_root_dir, dot_vars){
 		}
 
 		if(!Array.isArray(tree)){
-			let msg = "Invalid tree.yaml file '" + input_file +
-								"' - expected an array of directory contents for '" +
-								output_root_dir + "'";
-			log.error(msg);
-			throw new Error(msg);
+			throw new Error(
+				"Invalid tree.yaml file '" + input_file +
+				"' - expected an array of directory contents for '" +
+				output_root_dir + "'"
+			);
 		}
 
 		for(let entry of tree){
@@ -277,11 +280,11 @@ function processTreeYaml(input_file, output_root_dir, dot_vars){
 				let keys = Object.keys(entry);
 
 				if(keys.length !== 1){
-					let msg = "Invalid tree.yaml file '" + input_file +
-										"' - expected single name to map to options object, got: " +
-										JSON.toString(entry);
-					log.error(msg);
-					throw new Error(msg);
+					throw new Error(
+						"Invalid tree.yaml file '" + input_file +
+						"' - expected single name to map to options object, got: " +
+						JSON.toString(entry)
+					);
 				}
 
 				name = keys[0];
