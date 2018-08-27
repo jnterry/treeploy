@@ -18,12 +18,13 @@ function treeploy_cli(arg_list){
 
 	/////////////////////////////////////////////////////////
 	// Deal with inputs
-	if(arg_list.indexOf('-h') > 0 || arg_list.indexOf('--help') > 0){
+	if(arg_list.indexOf('-h') >= 0 || arg_list.indexOf('--help') >= 0){
 		displayHelp();
 		return Q(0);
 	}
 
 	if(arg_list.length < 2){
+		log.error("Too few arguments\n");
 		printUsage();
 		return Q(1);
 	}
@@ -32,8 +33,8 @@ function treeploy_cli(arg_list){
 	let output_path = arg_list[1];
 
 	if(input_path.startsWith('-') || output_path.startsWith('-')){
+		log.error("Input and output paths must be first two arguments - place flags afterwards\n");
 		printUsage();
-		log.error("\nInput and output paths must be first two arguments - place flags after these!");
 		return Q(1);
 	}
 
