@@ -330,7 +330,7 @@ function setModelValue(value, options){
  */
 function setModelField(field_name, field_value, options){
 	if(field_name === ''){
-		options.dot_models = field_value;
+		options.dot_models = Object.assign(options.dot_models, field_value);
 		return;
 	}
 
@@ -342,7 +342,17 @@ function setModelField(field_name, field_value, options){
 		}
 		object_node = object_node[field_parts[i]];
 	}
-	object_node[field_parts[field_parts.length-1]] = field_value;
+
+	let field = field_parts[field_parts.length-1];
+
+	if(typeof field_value === 'object'){
+		// If the field_value is an object then merge the current value
+		// with the new one, hence we will not overwrite fields that
+		// currently exist in the model, but that do not exist in the new field_value
+		object_node[field] = Object.assign(object_node[field] || {}, field_value);
+	} else {
+		object_node[field] = field_value;
+	}
 }
 
 module.exports = treeploy_cli;

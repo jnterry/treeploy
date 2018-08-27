@@ -55,6 +55,7 @@ function treeploy(source_path, target_path, options){
 		// we need to guarentee that the dot_engine.varname order matches up
 		// with the order of parameters we pass to templates, convert everything
 		// to an array here and use that from now on
+
 		let models = Object.keys(options.dot_models);
 
 		options.dot_models = models.map((x) => options.dot_models[x]);
