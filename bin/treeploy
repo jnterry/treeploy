@@ -4,11 +4,10 @@ let treeploy_cli = require('../src/cli.js');
 
 treeploy_cli(process.argv.slice(2))
 	.then((exit_code) => {
-		system.exit(exit_code);
+		process.exit(exit_code);
 	})
 	.catch((e) => {
-		log.error("Unhandelled exception occured: ");
-		console.dir(e);
-		system.exit(100);
+		log.error(e.message);
+		process.exit(100);
 	})
 	.done();
