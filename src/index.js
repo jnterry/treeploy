@@ -53,13 +53,7 @@ function treeploy(source_path, target_path, options){
 			if(input_stat.isDirectory()){
 				return treeployDirectory(source_path, target_path, options);
 			} else if (input_stat.isFile()){
-				let dirname  = path.basename(source_path);
-				let basename = path.basename(source_path);
-				if(dirname === source_path){
-					// then source_path is a plain filename in cwd
-					dirname = "./";
-				}
-				return treeployFile(dirname, target_path, basename, options);
+				return treeployFile(source_path, target_path, options);
 			} else {
 				throw new Error("Source path is neither a directory nor a file");
 			}
@@ -95,7 +89,7 @@ function treeployDirectory(source_path, target_path, options){
 							if(entry.match(file_name_regex.tree_descriptor)){
 								tree_files.push(entry);
 							} else {
-								return treeployFile(source_path, target_path, entry, options);
+								return treeployFile(source_path + entry, target_path + entry, options);
 							}
 
 						} else {
@@ -108,13 +102,14 @@ function treeployDirectory(source_path, target_path, options){
 			return Q
 				.all(promises)
 				.then(() => Q.all(
-					tree_files.map((x) => treeployFile(source_path, target_path, x, options))
+					tree_files.map((x) => treeployFile(source_path + x, target_path + x, options))
 				));
 		});
 }
 
-function treeployFile(source_dir, target_dir, file_name, options){
-	let source_path = source_dir + file_name;
+function treeployFile(source_path, target_path, options){
+
+	let file_name = path.basename(source_path);
 
 	let dot_models = undefined;
 	if(options != null){ dot_models = options.dot_models; }
@@ -128,7 +123,7 @@ function treeployFile(source_dir, target_dir, file_name, options){
 		// :TODO: make processTreeYaml return a promise :ISSUE6:
 		return Q().then(() => {
 			console.log("Processing tree yaml: " + source_path);
-			processTreeYaml(source_path, target_dir, dot_models);
+			processTreeYaml(source_path, target_path, dot_models);
 		});
 	}
 
@@ -136,12 +131,11 @@ function treeployFile(source_dir, target_dir, file_name, options){
 		return Q().then(() => {
 			// :TODO: make processDotFile return a promise :ISSUE6:
 			console.log("Processing dot template: " + source_path);
-			processDotFile(source_dir, target_dir, file_name, dot_models)
+			processDotFile(source_path, target_path, dot_models)
 		});
 	}
 
 	// otherwise this is just a standard file...
-	let target_path = target_dir + file_name;
 	console.log("Copying file " + source_path + " to " + target_path);
 	return fse
 		.copy(source_path, target_path)
@@ -176,24 +170,23 @@ function processDotTemplate(template_name, template, dot_vars){
 /**
  * Process a dot file template and writes the output to the output directory
  *
- * @param {string}  input_path  - Path of the root input  directory
- * @param {string}  output_path - Path of the root output directory
- * @param {RelPath} rel         - Object with relative paths of dot file to process
+ * @param {string}  input_path  - Path of the dot file to process
+ * @param {string}  output_path - Path to write the result to
  * @param {object}  dot_vars    - Variables to be passed as model to template
  */
-function processDotFile(input_path, output_path, file_name, dot_vars){
-	let template_content  = fs.readFileSync(input_path + file_name);
+function processDotFile(input_path, output_path, dot_vars){
+	if(output_path.endsWith('.dot')){
+		output_path = output_path.substring(0, output_path.length-4);
+	}
+
+	let template_content  = fs.readFileSync(input_path);
 
 	let output_content = processDotTemplate(
-		input_path + file_name, template_content, dot_vars
+		input_path, template_content, dot_vars
 	);
 
-	// remove dot extension
-	let output_filename = output_path + file_name;
-	output_filename = output_filename.substring(0, output_filename.length-4);
-
-	fs.writeFileSync(output_filename, output_content);
-	file_utils.syncFileMetaData(input_path + file_name, output_filename);
+	fs.writeFileSync(output_path, output_content);
+	file_utils.syncFileMetaData(input_path, output_path);
 }
 
 
@@ -202,6 +195,15 @@ function processDotFile(input_path, output_path, file_name, dot_vars){
  * files and directories in the root directory
  */
 function processTreeYaml(input_file, output_root_dir, dot_vars){
+
+	if(output_root_dir.endsWith(path.basename(input_file))){
+		// if trying to copy to corresponding tree.yaml in output
+		// tree copy instead to the directory containing the tree.yaml
+		output_root_dir = path.dirname(output_root_dir) + "/";
+	}
+
+	fse.ensureDirSync(output_root_dir);
+
 	let content = fs.readFileSync(input_file).toString('utf8');
 
 	if(input_file.endsWith('.dot')){
