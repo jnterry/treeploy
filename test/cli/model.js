@@ -44,22 +44,18 @@ afterEach(() => {
 });
 
 runTestExpectError('No model', []);
-runTestExpectError('Missing value with single arg', ['--model']);
-runTestExpectError('Missing value with multi arg',
-									 ['--model', 'data=hi', '--model']);
-runTestExpectError('Invalid value (no value) - single arg',
-									 ['--model', 'data']);
-runTestExpectError('Invalid value (no field) - single arg',
-									 ['--model', '=hello']);
-runTestExpectError('Invalid value (no value) - multi arg',
-									 ['--model', 'thing=1', '--model', 'data']);
-runTestExpectError('Invalid value (no field) - multi arg',
-									 ['--model', 'thing=1', '--model', '=hello']);
-
+runTestExpectError('Missing <field> and <value> with single flag',
+									 ['--model']);
+runTestExpectError('Missing <value> with single flag',
+									 ['--model', 'test']);
+runTestExpectError('Missing <field> and <value> with multiple flag',
+									 ['--model', 'test', '3', '--model']);
+runTestExpectError('Missing <value> with multiple flag',
+									 ['--model', 'test', '--overwrite', '--model', 'thing', 'a']);
 
 runTestExpectSuccess(
 	'Single string',
-	['--model', 'data=hello'],
+	['--model', 'data', 'hello'],
 	'hello'
 );
 
@@ -67,18 +63,17 @@ runTestExpectSuccess(
 
 runTestExpectSuccess(
 	'Single int',
-	['--model', 'data=123'],
+	['--model', 'data', '123'],
 	123
 );
 runTestExpectSuccess(
 	'Quoted int string',
-	['--model', "data='123'"],
+	['--model', 'data', "'123'"],
 	'123'
 );
-
 runTestExpectSuccess(
 	'Double quoted int string',
-	['--model', 'data="123"'],
+	['--model', 'data', '"123"'],
 	'123'
 );
 
@@ -86,17 +81,17 @@ runTestExpectSuccess(
 
 runTestExpectSuccess(
 	'Single float',
-	['--model', 'data=9.5'],
+	['--model', 'data', '9.5'],
 	9.5
 );
 runTestExpectSuccess(
 	'Quoted float string',
-	['--model', "data='9.5'"],
+	['--model', 'data', "'9.5'"],
 	'9.5'
 );
 runTestExpectSuccess(
 	'Double quoted float string',
-	['--model', 'data="9.5"'],
+	['--model', 'data', '"9.5"'],
 	'9.5'
 );
 
@@ -105,8 +100,8 @@ runTestExpectSuccess(
 runTestExpectSuccess(
 	'Build flat object',
 
-	['--model', 'data.greeting=hello',
-	 '--model', 'data.name=bob'
+	['--model', 'data.greeting', 'hello',
+	 '--model', 'data.name', 'bob',
 	],
 
 	{
@@ -118,10 +113,10 @@ runTestExpectSuccess(
 runTestExpectSuccess(
 	'Build deep object',
 
-	['--model', 'data.greeting=hello',
-	 '--model', 'data.user.name=bob',
-	 '--model', 'data.user.age=32',
-	 '--model', 'data.user.dob.month=may'
+	['--model', 'data.greeting',       'hello',
+	 '--model', 'data.user.name',      'bob',
+	 '--model', 'data.user.age',       '32',
+	 '--model', 'data.user.dob.month', 'may'
 	],
 
 	{

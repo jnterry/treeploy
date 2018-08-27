@@ -105,50 +105,53 @@ Usage:
   treeploy INPUT_PATH OUTPUT_PATH [options]
 
 Options:
-
-+=====================#========================================================+
+	` +
+		/**********************************************/
+		/* IGNORE THE FACT THE TABLE LINES ARE JAGGED */
+		/*   THEY LINE UP WHEN PRINTED DUE TO ESCAPE  */
+		/*       CHARACTER SEQUENCES LIKE \\          */
+		/**********************************************/`
+#=====================#========================================================+
 | -v, --verbose       | Increases verbosity level                              |
 |                     | Can be used multiple times with the following effects: |
 |                     |   0 : errors only                                      |
 |                     |   1 : above and warnings                               |
 |                     |   2 : above and info/debug messages                    |
 |                     |   3 : above and trace messages                         |
-|=====================#========================================================#
+#=====================#========================================================#
 | --overwrite         | Disable CLI nag when the destination path exists.      |
 |                     | The program will overwrites any conflicting paths      |
 +---------------------+--------------------------------------------------------+
 | --noroot            | Disable CLI nag when running as user other than root   |
 |                     | Program may fail to set permissions on files           |
-|=====================#========================================================#
-| --model <param>     | Sets a field of the model passed to doT templates      |
-|                     |                                                        |
+#=====================#========================================================#
+| --model \\           | Sets a field of the model passed to doT templates      |
+|     <field> <value> |                                                        |
 |                     | Conceptually the model should be thought of as a JSON  |
 |                     | object that is accessable globally in the dot template |
 |                     |                                                        |
-|                     | <param> should be of the form: 'field.name=value'      |
+|                     | <field> should be of the form: 'field.name'            |
 |                     |                                                        |
-|                     | 'value' will be parsed as a string, unless it can be   |
+|                     | <value> will be parsed as a string, unless it can be   |
 |                     | parsed as a float or integer; this can be prevented    |
-|                     | using quotes, for example: model.number=\'123\'        |
+|                     | using quotes, for example: model.number=\\'123\\'        |
 |                     |                                                        |
-|                     | Example: --model host.ip=$(curl https://api.ipify.org/)|
+|                     | Example: --model version.commit $(git rev-parse HEAD)  |
 +---------------------+--------------------------------------------------------+
-| --modelfile <param> | Loads a yaml or json file and merges the loaded data   |
-|                     | into the currently loaded model                        |
+| --modelfile \\       | Loads a yaml or json file at the path given by <file>  |
+|      <field> <file> | and merges the data into the current model             |
 |                     |                                                        |
-|                     | <param> should be of the format 'field.name=file_path' |
+| --modelfile <file>  | <field> should be of the form 'field.name'             |
+#---------------------+--------------------------------------------------------+
+| --modelcmd \\        | Executes some command, parse it's stdout as JSON and   |
+|       <field> <cmd> | then treats it as with data loaded by --modelfile      |
 |                     |                                                        |
-|                     | Alternatively <param> can just be a filename, in which |
-|                     | case it be loaded and merged into the whole model      |
-+---------------------+--------------------------------------------------------+
-| --modelcmd <param>  | Executes some command, parse it's stdout as JSON and   |
-|                     | then treats it as with data loaded by --modelfile      |
-|                     |                                                        |
-|                     | :TOOD: param format                                    |
-+=====================#=========================================================
-| -h, --help          | Display this help infomation
-+====+================#=========================================================
-	`);
+| --modelcmd <cmd>    | Example: --modelcmd host.ip \\                          |
+|                     |             'curl "https://api.ipify.org?format=json"' |
+#=====================#=========================================================
+| -h, --help          | Display this help infomation                           |
+#=====================#=========================================================
+`);
 }
 
 function parseOptionalArguments(arg_list){
@@ -190,24 +193,42 @@ function parseOptionalArguments(arg_list){
 			case '--overwrite' : options.overwrite = true; break;
 
 				// arguments with parameters
-			case '--modelfile' :
 			case '--model':
-
+			case '--modelfile' :
+			case '--modelcmd':
 				let arg   = arg_list[i+0];
-				let value = arg_list[i+1];
+				let field = arg_list[i+1];
+				let value = arg_list[i+2];
+
+				if(field == null || field.startsWith('-')){
+					throw new Error("Expected <field> to be specified for argument " +
+													arg + ", got: " + field);
+				}
 
 				if(value == null || value.startsWith('-')){
-					throw new Error("Expected value to be specified for argument " +
-													arg + ", got: " + value);
+					value = field;
+					field = '';
+					if(value == null || value.startsWith('-')){
+						throw new Error("Expected value to be specified for argument " +
+														arg + ", got: " + value);
+					}
+					i += 1; // skip the single value argument
+				} else {
+					i += 2; // skip the <field> <value> arguments
 				}
-				i++;
 
 				switch(arg){
-					case '--modelfile':
-						loadModelFile(value, options);
-						break;
 					case '--model':
-						setModelValue(value, options);
+						if(field === ''){
+							throw new Error("<field> argument is mandatory for --model flag");
+						}
+						processFlagModel(field, value, options);
+						break;
+					case '--modelfile':
+						processFlagModelFile(field, value, options);
+						break;
+					case '--modelcmd':
+						processFlagModelCmd(field, value, options);
 						break;
 				}
 
@@ -231,25 +252,7 @@ function parseOptionalArguments(arg_list){
  * @param {object} options - Current state of parsed options, this will be
  * modified to reflect new options with additional model field
  */
-function loadModelFile(value, options){
-
-	let parts = value.split('=');
-
-	let model_path = '';
-	let file_name  = null;
-	if(parts.length === 1){
-		file_name = parts[0];
-	} else if (parts.length === 2){
-		model_path = parts[0];
-		file_name  = parts[1];
-	} else {
-		throw new Error(
-			"Invalid argument to --modelfile flag, got: '" + value +
-			"', must be of form 'model.field=./filename' or './filename'"
-		);
-	}
-
-
+function processFlagModelFile(model_path, file_name, options){
 	let extension = file_name.split('.').pop();
 
 	if(['yaml', 'yml', 'json'].indexOf(extension) < 0){
@@ -281,25 +284,15 @@ function loadModelFile(value, options){
 }
 
 /**
- * Sets a doT.js model value given the command line parameter
+ * Sets a doT.js model value given the command line flag's arguments
  *
- * @param {string} value - Value given to the --model CLI flag, should be of
- * form 'model.field.name=value'
+ * @param {string} field_name  - The name of the field to modify
+ * @param {string} field_value - The new value for field
  *
  * @param {object} options - Current state of parsed options, this will be
  * modified to reflect new options with additional model field
  */
-function setModelValue(value, options){
-	let parts = value.split('=');
-
-	let field_name  = parts[0];
-	let field_value = parts[1];
-
-	if(parts.length != 2 || field_name === ''){
-		throw new Error("--model argument expects value of form 'field.name=value', " +
-										"got: '" + value + "'");
-	}
-
+function processFlagModel(field_name, field_value, options){
 	if(field_value.match(/^[0-9]+$/)){
 		field_value = parseInt(field_value);
 	} else if(field_value.match(/^(\+|-)?[0-9]*\.[0-9]+$/)){
@@ -315,6 +308,10 @@ function setModelValue(value, options){
 	}
 
 	setModelField(field_name, field_value, options);
+}
+
+function processFlagModelCmd(field, cmd, options){
+
 }
 
 /**

@@ -35,9 +35,9 @@ it('Complex scenario', () => {
 	return treeploy_cli(
 		['model.json.dot', 'model.json',
 		 '--modelfile', './base.json',
-		 '--model', 'web.port=443',
-		 '--modelfile', 'db=db_params.yaml',
-		 '--model', 'db.thing.goes.here=8',
+		 '--model', 'web.port', '443',
+		 '--modelfile', 'db', 'db_params.yaml',
+		 '--model', 'db.thing.goes.here', '8',
 		])
 		.then((exit_code) => {
 			expect(exit_code).is.deep.equal(0);

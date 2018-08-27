@@ -54,18 +54,6 @@ runTestExpectError(
 	'file', 'content',
 	['--modelfile']);
 runTestExpectError(
-	'No filename for --modelfile will cause non-zero exit code',
-	'file', 'content',
-	['--modelfile', 'thing=']);
-runTestExpectError(
-	'No field name for --modelfile will cause non-zero exit code',
-	'test.yaml', 'thing: 1',
-	['--modelfile', '=test.yaml']);
-runTestExpectError(
-	'Malformed argument to --modelfile will cause non-zero exit code',
-	'test.yaml', 'thing: 1',
-	['--modelfile', '===']);
-runTestExpectError(
 	'Attempting to load non-existant --modelfile will cause non-zero exit code',
 	'test.yaml', 'thing: 1',
 	['--modelfile', 'test.json']);
@@ -76,11 +64,11 @@ runTestExpectError(
 runTestExpectError(
 	'Malformed yaml will cause non-zero exit code',
 	'test.yaml', ':\n   :\n:{}-\n-',
-	['--modelfile', '=test.yaml']);
+	['--modelfile', 'test.yaml']);
 runTestExpectError(
 	'Malformed json will cause non-zero exit code',
 	'test.json', ':::',
-	['--modelfile', '=test.json']);
+	['--modelfile', 'test.json']);
 
 runTestExpectSuccess(
 	'Single yaml for all',
@@ -101,7 +89,7 @@ runTestExpectSuccess(
 	'Single yaml for specified field',
 	'data.yaml',
 	'a: 3\nb: 5',
-	['--modelfile', 'data=data.yaml'],
+	['--modelfile', 'data', 'data.yaml'],
 	{ a: 3, b: 5 }
 );
 
@@ -109,7 +97,7 @@ runTestExpectSuccess(
 	'Single json for specified sub-field',
 	'data.json',
 	'{ "name": "Tim", "age": 32 }',
-	['--modelfile', 'data.person=data.json'],
+	['--modelfile', 'data.person', 'data.json'],
 	{
 		person : {
 			name: 'Tim',
