@@ -103,7 +103,7 @@ it('Single template, multi-model', () => {
 	},
 	"db": {
 		"user": "user_name",
-		"password": "{{= secrets.db_password }}",
+		"password": "{{= secrets.db_password }}"
 	}
 }`
 		},
@@ -118,7 +118,7 @@ it('Single template, multi-model', () => {
 			secrets: { db_password: 'password1234' }
 		},
 	}).then(() => {
-		expect(fs.existsSync  ('target/test.json')         ).is.false;
+		expect(fs.existsSync  ('target/test.json')         ).is.true;
 		expect(fs.statSync    ('target/test.json').isFile()).is.true;
 
 		let data = JSON.parse(fs.readFileSync('target/test.json'));

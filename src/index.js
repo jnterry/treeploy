@@ -44,11 +44,24 @@ const file_name_regex = {
  * else a promise which is rejected
  */
 function treeploy(source_path, target_path, options){
-	if(options == null){
-		options = {};
+	if(options            == null) { options            = {}; }
+	if(options.verbosity  == null) { options.verbosity  =  0; }
+	if(options.dot_models == null) { options.dot_models = {}; }
+
+	if(typeof options.dot_models != 'object'){
+		log.warn('Expected options.dot_models to be an object mapping doT.js varnames to values - dot_models will be ignored, template evaluation may fail');
+		options.dot_models = [];
+	} else {
+		// we need to guarentee that the dot_engine.varname order matches up
+		// with the order of parameters we pass to templates, convert everything
+		// to an array here and use that from now on
+		let models = Object.keys(options.dot_models);
+
+		options.dot_models = models.map((x) => options.dot_models[x]);
+		dot_engine.templateSettings.varname = models.join(',');
 	}
 
-	global.log = makeLogger(options.verbosity || 0);
+	global.log = makeLogger(options.verbosity);
 
 	return Q(fse
 		.pathExists(source_path)
@@ -168,7 +181,7 @@ function processDotTemplate(template_name, template, dot_vars){
 	let output_content    = null;
 
 	try {
-		return output_content = template_function(dot_vars.it);
+		return output_content = template_function.apply(null, dot_vars);
 	} catch (e) {
 		log.error("Failed to process dot template: '" + template_name + "': " + e.toString());
 		throw e;
