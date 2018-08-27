@@ -49,7 +49,7 @@ Treeploy is designed to be used in one of the following ways:
   - This relies on the system having nodejs installed
 - **Command Line - Standalone Executable**
   - For each release standalone executables that DO NOT depend on node.js being installed are generated using the [pkg](https://www.npmjs.com/package/pkg) module
-  - Simply download a suitable version from 'https://github.com/jnterry/treeploy/releases' and add to your system's path
+  - Simply download a suitable version from [releases](https://github.com/jnterry/treeploy/releases) and add to your system's path
 - **Programmatically**
   - Add treeploy as a dependency to your npm project
   - `treeploy = require('treeploy');`
