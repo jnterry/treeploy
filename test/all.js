@@ -25,4 +25,8 @@ describe('all', () => {
 		importTest('treeploy/mixed');
 		importTest('treeploy/single_file');
 	});
+
+	describe('cli', () => {
+		importTest('cli/core');
+	});
 });

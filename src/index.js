@@ -89,11 +89,29 @@ function treeployDirectory(source_path, target_path, options){
 	if(!target_path.endsWith('/')){ target_path += '/'; }
 
 	return fse
-		.ensureDir(target_path)
+		.exists(target_path)
+		.then((does_exist) => {
+			if(!does_exist){ return; }
+
+			return fse
+				.stat(target_path)
+				.then((stat) => {
+					if(!stat.isDirectory()){
+						if(options.overwrite){
+							log.info("Removing conflicting non-directory in place of: " + target_path);
+							return fse.remove(target_path);
+						} else {
+							let msg = "Path '" + target_path + "' exists as non-directory and options.overwrite is not set";
+							log.error(msg)
+							throw new Error(msg);
+						}
+					}
+				})
+		})
+		.then(() => fse.ensureDir(target_path))
 		.then(() => file_utils.syncFileMetaData(source_path, target_path))
 		.then(() => fse.readdir(source_path))
 		.then((entries) => {
-
 			// we need delay tree yaml files to the end since they may manipulate the
 			// permisions of normal files
 			let tree_files = [];

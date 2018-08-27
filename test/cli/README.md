@@ -1,0 +1,1 @@
+This directory contains test cases for the CLI of treeploy - these tend to be more involved tests that are meant to be example use cases, where as the tests in treeploy/ test the core functionality piece by piece

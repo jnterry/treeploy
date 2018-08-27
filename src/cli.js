@@ -55,9 +55,10 @@ function treeploy_cli(arg_list){
 		return Q(1);
 	}
 
-	if(argv.verbose){ options.verbosity = 1; }
-	if(argv.debug  ){ options.verbosity = 2; }
-	if(argv.trace  ){ options.verbosity = 3; }
+	if(argv.verbose  ) { options.verbosity = 1; }
+	if(argv.debug    ) { options.verbosity = 2; }
+	if(argv.trace    ) { options.verbosity = 3; }
+	if(argv.overwrite) { options.overwrite = true; }
 	/////////////////////////////////////////////////////////
 
 
@@ -87,6 +88,7 @@ function treeploy_cli(arg_list){
 		if(!response.match('[Yy]|[Yy][Ee][Ss]')){
 			return Q(0);
 		}
+		options.overwrite = true;
 	}
 	/////////////////////////////////////////////////////////
 
