@@ -34,8 +34,6 @@ const file_name_regex = {
 	template        : /^.+\.dot$/,
 };
 
-let log = null;
-
 /**
  * Performs treeploy process
  * @param {string} source_path - Path to the input tree
@@ -50,7 +48,7 @@ function treeploy(source_path, target_path, options){
 		options = {};
 	}
 
-	log = makeLogger(options.verbosity || 0);
+	global.log = makeLogger(options.verbosity || 0);
 
 	return Q(fse
 		.pathExists(source_path)

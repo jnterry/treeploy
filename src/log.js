@@ -34,4 +34,6 @@ function makeLogger(level){
 	return logger;
 }
 
+global.log       = makeLogger(0);
+
 module.exports = makeLogger;
