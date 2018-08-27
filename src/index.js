@@ -170,9 +170,8 @@ function processDotTemplate(template_name, template, dot_vars){
 	try {
 		return output_content = template_function(dot_vars.it);
 	} catch (e) {
-		console.error("Failed to process dot template: '" + template_name + "', error follows:");
-		console.dir(e);
-		throw new Error("Invalid dot template: " + template_name);
+		log.error("Failed to process dot template: '" + template_name + "': " + e.toString());
+		throw e;
 	}
 }
 
@@ -229,10 +228,11 @@ function processTreeYaml(input_file, output_root_dir, dot_vars){
 		}
 
 		if(!Array.isArray(tree)){
-			log.error("Expected an array of directory contents for '" +
-								output_root_dir + "' in: '" + input_file + "', got: ");
-			console.dir(tree);
-			throw new Error("Invalid tree.yaml file: " + input_file);
+			let msg = "Invalid tree.yaml file '" + input_file +
+								"' - expected an array of directory contents for '" +
+								output_root_dir + "'";
+			log.error(msg);
+			throw new Error(msg);
 		}
 
 		for(let entry of tree){
@@ -246,9 +246,11 @@ function processTreeYaml(input_file, output_root_dir, dot_vars){
 				let keys = Object.keys(entry);
 
 				if(keys.length !== 1){
-					log.error("Expected single entry name to map to entry options, got: ");
-					console.dir(entry);
-					throw new Error("Invalid tree.yaml file: " + input_file);
+					let msg = "Invalid tree.yaml file '" + input_file +
+										"' - expected single name to map to options object, got: " +
+										JSON.toString(entry);
+					log.error(msg);
+					throw new Error(msg);
 				}
 
 				name = keys[0];

@@ -90,3 +90,50 @@ it('File named .dot is not processed', () => {
 		mockfs.restore();
 	});
 });
+
+
+it('Single template, multi-model', () => {
+	mockfs({
+		source : {
+			'test.json.dot': `
+{
+	"web": {
+		"domain": "{{= web.domain }}",
+		"port": {{= web.port }}
+	},
+	"db": {
+		"user": "user_name",
+		"password": "{{= secrets.db_password }}",
+	}
+}`
+		},
+	});
+
+	return treeploy('source', 'target', {
+		dot_models: {
+			web: {
+				domain: 'test.example.com',
+				port: 80
+			},
+			secrets: { db_password: 'password1234' }
+		},
+	}).then(() => {
+		expect(fs.existsSync  ('target/test.json')         ).is.false;
+		expect(fs.statSync    ('target/test.json').isFile()).is.true;
+
+		let data = JSON.parse(fs.readFileSync('target/test.json'));
+
+		expect(data).is.deep.equal({
+			web: {
+				domain: "test.example.com",
+				port: 80
+			},
+			db: {
+				user: "user_name",
+				password: "password1234",
+			},
+		});
+	}).finally(() => {
+		mockfs.restore();
+	});
+});
