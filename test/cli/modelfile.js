@@ -62,6 +62,18 @@ runTestExpectError(
 	'test.yaml', 'thing: 1',
 	['--modelfile', '=test.yaml']);
 runTestExpectError(
+	'Malformed argument to --modelfile will cause non-zero exit code',
+	'test.yaml', 'thing: 1',
+	['--modelfile', '===']);
+runTestExpectError(
+	'Attempting to load non-existant --modelfile will cause non-zero exit code',
+	'test.yaml', 'thing: 1',
+	['--modelfile', 'test.json']);
+runTestExpectError(
+	'Attempting to load --modelfile with bad extension will cause non-zero exit code',
+	'test.txt', 'thing: 1',
+	['--modelfile', 'test.txt']);
+runTestExpectError(
 	'Malformed yaml will cause non-zero exit code',
 	'test.yaml', ':\n   :\n:{}-\n-',
 	['--modelfile', '=test.yaml']);
@@ -90,16 +102,13 @@ data:
 );
 
 runTestExpectSuccess(
-	'Single yaml for specified model',
-	'data.yaml',
-	`
-name: 'Tim'
-age: 32
-	`,
-	['--modelfile', 'data=data.yaml'],
+	'Single js for specified model',
+	'data.js',
+	'module.exports = { name: "JsPerson", age: 3 + 5 };',
+	['--modelfile', 'data=data.js'],
 	{
-		name: 'Tim',
-		age: 32
+		name: 'JsPerson',
+		age: 8
 	}
 );
 
