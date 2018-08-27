@@ -5,14 +5,15 @@
 
 "use strict"
 
-const fs         = require('fs');
-const stdin      = require('readline-sync')
-const yaml       = require('node-yaml');
-const parseArgs  = require('minimist');
-const path       = require('path');
-const Q          = require('q');
+const fs          = require('fs');
+const stdin       = require('readline-sync')
+const yaml        = require('node-yaml');
+const parseArgs   = require('minimist');
+const path        = require('path');
+const Q           = require('q');
+const eval_module = require('eval');
 
-const treeploy   = require('./index.js');
+const treeploy    = require('./index.js');
 
 function treeploy_cli(arg_list){
 
@@ -195,10 +196,95 @@ function parseOptionalArguments(arg_list){
 	return options;
 }
 
+/**
+ * Loads a doT.js model file
+ *
+ * @param {string} value - The argument to the --modelfile CLI flag, should be
+ * of the form 'model.field=./filename.json' or './filename.json', in later case
+ * entire options.dot_models variable will be set to file contents
+ * File to load must have one of following extensions: .js, .json, .yaml or .yml
+ *
+ * @param {object} options - Current state of parsed options, this will be
+ * modified to reflect new options with additional model field
+ */
 function loadModelFile(value, options){
 
+	let parts = value.split('=');
+
+	let model_path = '';
+	let file_name  = null;
+	if(parts.length === 1){
+		file_name = parts[0];
+	} else if (parts.length === 2){
+		model_path = parts[0];
+		file_name  = parts[1];
+	} else {
+		throw new Error(
+			"Invalid argument to --modelfile flag, got: '" + value +
+			"', must be of form 'model.field=./filename' or './filename'"
+		);
+	}
+
+
+	let extension = file_name.split('.').pop();
+
+	if(['yaml', 'yml', 'js', 'json'].indexOf(extension) < 0){
+		throw new Error(
+			"Model file must have one of following extensions: .js, .json. .yaml, .yml"
+		);
+	}
+
+	if(!fs.existsSync(file_name) || !fs.statSync(file_name).isFile()){
+		throw new Error(
+			"Specified model file does not exist or is not a file, path: " + file_name
+		);
+	}
+
+	let loaded_data = null;
+
+	try {
+		switch(extension){
+			case 'yaml':
+			case 'yml': {
+				let content = fs.readFileSync(file_name);
+				loaded_data = yaml.parse(content);
+				break;
+			}
+			case 'json': {
+				let content = fs.readFileSync(file_name);
+				loaded_data = JSON.parse(content);
+				break;
+			}
+			case 'js':
+				try {
+					// standard require(...) does not work in context of test cases,
+					// nor when compiled using pkg -> hence we load the module source
+					// and eval it
+					// :TODO: -> can we load a module which require(...)'s a module?
+					let content = fs.readFileSync(file_name);
+					loaded_data = eval_module(content);
+				} catch (e) {
+					console.log(e);
+					throw new Error('Error evaluating js module: ' + e.toString());
+				}
+				break;
+		}
+	} catch (e) {
+		throw new Error("Failed to load modelfile '" + file_name + "': " + e.message);
+	}
+
+	setModelField(model_path, loaded_data, options);
 }
 
+/**
+ * Sets a doT.js model value given the command line parameter
+ *
+ * @param {string} value - Value given to the --model CLI flag, should be of
+ * form 'model.field.name=value'
+ *
+ * @param {object} options - Current state of parsed options, this will be
+ * modified to reflect new options with additional model field
+ */
 function setModelValue(value, options){
 	let parts = value.split('=');
 
@@ -222,6 +308,30 @@ function setModelValue(value, options){
 		// int, but leave it as a string)
 		// Remove the quotes
 		field_value = field_value.substr(1, field_value.length-2);
+	}
+
+	setModelField(field_name, field_value, options);
+}
+
+/**
+ * Sets some field of the doT.js model in options
+ *
+ * Note, this function will create any intermediate objects, eg
+ * if setting web.host.domain it will create the host object within
+ * web, and then set the domain field of that
+ *
+ * @param {string} field_name - Name of field, may contain dots to indicate
+ * fields within objects
+ *
+ * @param {any}    field_value - The value to set the field to
+ *
+ * @param {object} options - Current state of parsed options, this will be
+ * modified to reflect new options with additional model field
+ */
+function setModelField(field_name, field_value, options){
+	if(field_name === ''){
+		options.dot_models = field_value;
+		return;
 	}
 
 	let field_parts = field_name.split('.');

@@ -28,6 +28,7 @@ describe('all', () => {
 
 	describe('cli', () => {
 		importTest('cli/core');
-		importTest('cli/models');
+		importTest('cli/model');
+		importTest('cli/modelfile');
 	});
 });
