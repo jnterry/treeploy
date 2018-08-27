@@ -4,8 +4,6 @@
 
 const fs         = require('fs');
 const fse        = require('fs-extra');
-const walk       = require('walk');
-const mkdirp     = require('mkdirp').sync;
 const yaml       = require('node-yaml');
 const dot_engine = require('dot');
 const Q          = require('q');
@@ -34,29 +32,6 @@ const file_name_regex = {
 	skipped         : /^#.*#$|^.#|.*~$/, // emacs backup files
 	template        : /^.+\.dot$/,
 };
-
-function getRelativePaths(input_path, entry_path, entry_name){
-	if(!entry_path.startsWith(input_path)){
-		console.error("Unexpected entry outside of input directory: "
-								+ root_path + "/" + stat.name);
-		process.exit(1);
-	}
-
-	// relative paths -> relative to both input_path and output_path
-	let rel = {
-		dir  : entry_path.substring(input_path.length+1),
-		file : entry_name,
-		path : null,
-	};
-
-	if(rel.dir.length != 0){
-		rel.path = rel.dir + '/' + rel.file;
-	} else {
-		rel.path = rel.file;
-	}
-
-	return rel;
-}
 
 /**
  * Performs treeploy process
@@ -289,7 +264,7 @@ function processTreeYaml(input_file, output_root_dir, dot_vars){
 					console.log("Overwritting existing non-directory with directory: " + full_path);
 					fs.unlinkSync(full_path);
 				}
-				mkdirp(full_path);
+				fse.ensureDirSync(full_path);
 			} else {
 				if(stats == null){
 					fs.writeFileSync(full_path, '');
