@@ -14,6 +14,9 @@
 	},
   "author": "Jamie Terry",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
 	"dependencies": {
 		"readline-sync": "1.4.9",
 		"node-yaml": "3.1.1",
