@@ -4,22 +4,25 @@
 
 "use strict";
 
+const path = require('path');
+
 /////////////////////////////////////////////////////////////////////
 /// \brief Helper function which imports a file containing a test suite
 /////////////////////////////////////////////////////////////////////
-function importTest(name, path){
-	if(path == null){ path = name; }
-
-	describe(name, function(){
-		require("./" + path);
+function importTest(file_path){
+	describe(path.basename(file_path), function(){
+		require("./" + file_path + '.js');
 	});
 }
 
-describe('treeploy', () => {
+describe('all', () => {
 	importTest('file_utils');
-	importTest('deploy_copy');
-	importTest('deploy_tree_yaml');
-	importTest('deploy_dot_file');
-	importTest('deploy_mixed');
-	importTest('deploy_single_file');
+
+	describe('treeploy', () => {
+		importTest('treeploy/copy');
+		importTest('treeploy/tree_yaml');
+		importTest('treeploy/dot_files');
+		importTest('treeploy/mixed');
+		importTest('treeploy/single_file');
+	});
 });
