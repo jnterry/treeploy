@@ -35,7 +35,8 @@ function treeploy_cli(arg_list){
 	/////////////////////////////////////////////////////////
 	// Display help
 	if(argv.help){
-		displayHelpAndTerminate();
+		displayHelp();
+		return Q(0);
 	}
 	/////////////////////////////////////////////////////////
 
@@ -121,7 +122,7 @@ function treeploy_cli(arg_list){
 }
 
 
-function displayHelpAndTerminate(){
+function displayHelp(){
 	console.log(`
 Usage:
   treeploy INPUT_PATH OUTPUT_PATH [DOT_VARS_FILE] [options]
@@ -137,7 +138,6 @@ Options:
 
   -h  --help             Display this help infomation
 	`);
-	process.exit(0);
 }
 
 module.exports = treeploy_cli;

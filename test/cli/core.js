@@ -40,7 +40,8 @@ it('Basic Usage', () => {
 	});
 
 	return treeploy_cli(['source', 'target'])
-		.then(() => {
+		.then((exit_code) => {
+			expect(exit_code).is.deep.equal(0);
 			checkTarget('target');
 		}).finally(() => {
 			mockfs.restore();
@@ -53,22 +54,91 @@ it('Relative and absolute paths', () => {
 	});
 
 	return treeploy_cli(['./source', '/absolute/path/specified/here'])
-		.then(() => {
+		.then((exit_code) => {
+			expect(exit_code).is.deep.equal(0);
 			checkTarget('/absolute/path/specified/here');
 		}).finally(() => {
 			mockfs.restore();
 		});
 });
 
-it('We can overwrite existing target', () => {
+it('Overwrite existing target', () => {
 	mockfs({
 		source : source_structure,
 		existing: 'uh oh I exist'
 	});
 
-	return treeploy_cli(['./source', 'existing', '--overwrite'])
-		.then(() => {
+	return treeploy_cli(['./source', 'existing', '--overwrite', '--trace'])
+		.then((exit_code) => {
+			expect(exit_code).is.deep.equal(0);
 			checkTarget('existing');
+		}).finally(() => {
+			mockfs.restore();
+		});
+});
+
+it('If we specify --help then nothing gets done', () => {
+	mockfs({
+		source : source_structure,
+	});
+
+	return treeploy_cli(['source', 'target', '--help'])
+		.then((exit_code) => {
+			expectNone('target');
+			expect(exit_code).is.deep.equal(0);
+		}).finally(() => {
+			mockfs.restore();
+		});
+});
+
+it('Specifing no arguments causes bad exit code', () => {
+	mockfs({
+		source : source_structure,
+	});
+
+	return treeploy_cli([])
+		.then((exit_code) => {
+			expect(exit_code).is.deep.equal(1);
+			expectNone('target');
+		}).finally(() => {
+			mockfs.restore();
+		});
+});
+
+it('Specifing only source causes bad exit code', () => {
+	mockfs({
+		source : source_structure,
+	});
+
+	return treeploy_cli([])
+		.then((exit_code) => {
+			expect(exit_code).is.deep.equal(1);
+			expectNone('target');
+		}).finally(() => {
+			mockfs.restore();
+		});
+});
+
+it('Single file mode acts as cp --preserve does if source is not special file', () => {
+	let file_opts = {
+		content : 'Hello world!',
+		uid     : 123,
+		gid     : 321,
+		mode    : parseInt('711', 8),
+	};
+
+	mockfs({
+		'in.txt' : mockfs.file(file_opts)
+	});
+
+	file_opts.mode = '0711';
+
+	return treeploy_cli(['in.txt', 'out.txt'])
+		.then((exit_code) => {
+			expect(exit_code).is.deep.equal(0);
+
+			expectFile('in.txt',  file_opts);
+			expectFile('out.txt', file_opts);
 		}).finally(() => {
 			mockfs.restore();
 		});
