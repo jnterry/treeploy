@@ -15,3 +15,25 @@ script:
 
 # Send coverage data to Coveralls
 after_script: "cat coverage/lcov.info | node_modules/coveralls/bin/coveralls.js"
+
+
+before_deploy: ./build_release.sh
+
+deploy:
+  - provider: npm
+    email: jamie-terry@outlook.com
+    api_key:
+      secure: sLPG8YPiXqTeo/8vB5GQ6z8YvPyck3r9g/5WUY4YKwbYFRd/xjF1vRaWoQlZIMDm0J0GF5x+Cu9qbFPI0Edw7PDfruPu1qt2VVymt78RDFqWCTZ3fS6+bMkS90tvXdWTt8dHs5LMfkQRvB95ac6BhoHCe7Xe8yIlihagpCIFCOwPoH45JY/TSa9NXXueqj/xBuf1feRcuaq5B2B02l70hehclyVVt9Ai4jb7kTvXAzEblumN+ctjmRXRJEJ/VmL/yHsZSA1fA3h477xKpJqgGEc7pCmQjgtIWklebPiRl9W2235kDk7zKL9kNVLB40nyK1x3GyhaElG7dxo2b2LZoD5m+MzIJLpnI6yP0tKtp4H0ShTUf8FggF4P0Bhq9PW2tB6aSoV3GwDQnuN4NpLCo7Csc/aleLLHPiXMMX2tjWVkex5Z9lbF8iQ1kas9YFjzV00P6amnrMwZqOOgQnm9IuaM3/PB3S698DYAItXp+rlMCmC8jlRgYKYTrzstpfxMmp9leMeD+1aajIMmKoiCWrSiho3kTSD94rtwmPtHH17jtVniNZWiApVqgTq3LDfewiSHmjoOguGY+dC/1Nv7/PmQRqEmAm/SIMG7X+z6Kre4UB3hLRN73F64uW7fs14SFaoCnW5LdDyDLQaeXBawd+wSvD8zODy6EG0wrHK1e0g=
+    on:
+      tags: true
+      branch: master
+      repo: jnterry/treeploy
+  - provider: releases
+    api_key:
+      secure: cnADV17yRZO2U7CCV/cnTScDg8eX0E21NPe+11vFNRl1JoW1jRM6Xwr4LyWla8sYXB0mw2RdIYwH4rckFiq4jMAH0xufMZquAfbTD9YmkR7oEP3lDbdq/Jwhjw9hy7tWghRe6gJzAsIEyYoA/HUFpnKGZGRpwVlkGyGWHoYVfDkSpNdXamuP0gtrteYSU3e6VGIG/tq5VU2wD4P6yvBr74RMJrj2w/BRJg+UzSHwdGkDWzC3yxG8Cj5u5kL/5ze0Bh9EM+ioscJci1QkbMm0/xdKwXJ+xzJSJQM3U9b2lAIZcgqDcEP62HMtPHsrUIz7xzSU6dEkTlAhP/xbD3PHiV99MYMC1E0hdxIYDhSWy5mSTJnQEkQDv701vLx/7xjgEEZI4G/Cb0wmlMoJHueiy+ZPeUmDnbkV22yA9oqrsZO3+PoB9lvyNzr1uO80XwL1/FczKbvp8KUFW6iloEaUiG7OmOo8IQhlKYU0Z4osaXnGyc2foOQHwTHf3umrfBIX+RhoYfNt0uM8QRdHWhPLcdGGaGDK8X3y+q/8GBihEFCKkDZSNoU+IXLA8GPF7H+wVrd0mhi87RGW91nP2nC+liMsfNF0TRhbkFR5WZ8cYCdbOoEZ5kDKxDIdIY28xfgk4P1iXeV6kmbYwOU7l6NzuUTTWPpFdh1H1nKSEKT2yPc=
+    file_glob: true
+    file: "./dist/*"
+    skip_cleanup: true
+    on:
+      tag: yes
+      branch: master

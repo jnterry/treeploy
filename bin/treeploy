@@ -9,8 +9,9 @@ const fs         = require('fs');
 const stdin      = require('readline-sync')
 const yaml       = require('node-yaml');
 const parseArgs  = require('minimist');
+const path       = require('path');
 
-const treeploy   = require('./index.js');
+const treeploy   = require('../');
 
 /////////////////////////////////////////////////////////
 // Parse inputs
@@ -101,7 +102,7 @@ if(dot_vars_file != null){
 	} else if (dot_vars_file.endsWith('.json')){
 		dot_vars = JSON.parse(fs.readFileSync(dot_vars_file, 'utf8'));
 	} else if (dot_vars_file.endsWith('.js')){
-		dot_vars = require(dot_vars_file);
+		dot_vars = require(path.resolve(dot_vars_file));
 	} else {
 		console.error("Specified dot vars file has unrecognised format!");
 		process.exit(1);

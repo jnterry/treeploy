@@ -11,3 +11,6 @@ coverage
 
 # Ignore generated documentation
 docs
+
+# Ignore standalone executables
+dist

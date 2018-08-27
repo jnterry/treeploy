@@ -39,6 +39,22 @@ Note however that simply including the full data directory in git (or some other
   - It may be undesirable to save secrets in the application's repository, and instead they should be included dynamically as part of the deployment process
   - [Solved by evaluation of dot templates](#dot-templates)
 
+# Installation
+
+Treeploy is designed to be used in one of the following ways:
+
+- **Command Line - Globally installed NPM module**
+  - Run `sudo npm install -g treeploy`
+  - `treeploy` can now be run from command line
+  - This relies on the system having nodejs installed
+- **Command Line - Standalone Executable**
+  - For each release standalone executables that DO NOT depend on node.js being installed are generated using the [pkg](https://www.npmjs.com/package/pkg) module
+  - Simply download a suitable version from 'https://github.com/jnterry/treeploy/releases' and add to your system's path
+- **Programmatically**
+  - Add treeploy as a dependency to your npm project
+  - `treeploy = require('treeploy');`
+  - Call `treeploy(input_path, output_path, { /* options */ })` as you wish
+
 # Operation
 
 The basic operation of `treeploy` is to take some input directory tree and copy all files within it to some output directory tree.
