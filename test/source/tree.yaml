@@ -1,0 +1,6 @@
+- thing.txt
+- dir_a/:
+    children:
+      - here.txt
+      - we.txt
+      - go.txt

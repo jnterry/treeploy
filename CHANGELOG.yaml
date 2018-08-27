@@ -1,6 +1,12 @@
+- v0.3.2:
+    date: '2018-08-27'
+    name: 'Packaging Fixes'
+    fixes:
+      - Remove dependency on userid package as it could not be packages properly by travis-ci
+      - Remove automatted building of windows and mac binaries, as I have no way to test them (and windows is unlikely to work given the amount of file permission stuff which is going on)
 - v0.3.1:
     date: '2018-08-27'
-    name: 'Packaging'
+    name: 'Automatted Packaging'
     features:
       - Properly package treeploy cli script in bin folder, as per npm documentation
       - Add script to build standalone treeploy executable

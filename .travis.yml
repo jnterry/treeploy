@@ -17,7 +17,13 @@ script:
 after_script: "cat coverage/lcov.info | node_modules/coveralls/bin/coveralls.js"
 
 
-before_deploy: ./build_release.sh
+before_deploy:
+  # Install packages required for building 32 bit version
+  - sudo dpkg --add-architecture i386
+  - sudo apt-get update
+  - sudo apt-get install -y libc6:i386 libstdc++6:i386
+  # Actually build the releases
+  - ./build_release.sh
 
 deploy:
   # Release updated package to npm

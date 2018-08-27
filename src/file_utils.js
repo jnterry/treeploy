@@ -4,8 +4,8 @@
 
 "use strict";
 
-const userid = require('userid');
-const fs     = require('fs');
+const execFileSync = require('child_process').execFileSync;
+const fs           = require('fs');
 
 require('./log.js');
 
@@ -60,7 +60,7 @@ function applyFilePermissions(path, options){
  				log.warn("uid's should be prefered over usernames to ensure " +
 								 "correct operation on systems where the user does not exist, got: " +
 								 options.owner);
-				uid = userid.uid(options.owner);
+				uid = execFileSync('/usr/bin/id', ['-u', options.owner]).toString();
 			}
 		} else {
 			throw new Error("Invalid type for options.user, expected number representing uid or string representing username");
@@ -77,7 +77,7 @@ function applyFilePermissions(path, options){
 				log.warn("gid's should be prefered over group names to ensure " +
 								 "correct operation on systems where the group does not exist, got: " +
 								 options.group);
-				gid = userid.gid(options.group);
+				uid = execFileSync('/usr/bin/id', ['-g', options.group]).toString();
 			} else {
 				throw new Error("Invalid type for options.group, expected number representing uid or string representing group name");
 			}
