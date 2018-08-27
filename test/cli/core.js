@@ -68,7 +68,7 @@ it('Overwrite existing target', () => {
 		existing: 'uh oh I exist'
 	});
 
-	return treeploy_cli(['./source', 'existing', '--overwrite', '--trace'])
+	return treeploy_cli(['./source', 'existing', '--overwrite', '-vvv'])
 		.then((exit_code) => {
 			expect(exit_code).is.deep.equal(0);
 			checkTarget('existing');
