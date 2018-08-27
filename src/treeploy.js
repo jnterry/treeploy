@@ -18,6 +18,7 @@ let argv = parseArgs(process.argv.slice(2), {
 	alias: {
 		warn  : ['v', 'verbose'],
 		debug : [],
+		trace : [],
 		help  : ['h'],
 	},
 });
@@ -48,12 +49,9 @@ if(input_path == null || output_path == null){
 	process.exit(1);
 }
 
-if(argv.verbose){
-	options.verbosity = 1;
-}
-if(argv.debug){
-	options.verbosity = 2;
-}
+if(argv.verbose){ options.verbosity = 1; }
+if(argv.debug  ){ options.verbosity = 2; }
+if(argv.trace  ){ options.verbosity = 3; }
 /////////////////////////////////////////////////////////
 
 
@@ -106,19 +104,12 @@ if(dot_vars_file != null){
 		console.error("Specified dot vars file has unrecognised format!");
 		process.exit(1);
 	}
+	options.dot_models.it = dot_vars;
 }
 /////////////////////////////////////////////////////////
 
 
-treeploy(
-	input_path,
-	output_path,
-	{
-		dot_models: {
-			it: dot_vars,
-		}
-	}
-).done();
+treeploy(input_path, output_path, options).done();
 
 
 function displayHelpAndTerminate(){
@@ -128,9 +119,10 @@ Usage:
 
 Options:
 
-  -v  --verbose,--warn  Enables printing of warnings
-      --debug           Enables printing of debug messages, implies --verbose
-  -h  --help            Display this help infomation
+      --warn             Enables printing of warnings
+  -v  --verbose,--debug  Enables printing of debug messages, implies --warn
+      --trace            Enables printing of trace message, implies --debug
+  -h  --help             Display this help infomation
 `);
 	process.exit(0);
 }
