@@ -78,7 +78,13 @@ function treeploy(source_path, target_path, options){
 			if(input_stat.isDirectory()){
 				return treeployDirectory(source_path, target_path, options);
 			} else if (input_stat.isFile()){
-				return treeployFile(source_path, target_path, options);
+				let dirname  = path.basename(source_path);
+				let basename = path.basename(source_path);
+				if(dirname === source_path){
+					// then source_path is a plain filename in cwd
+					dirname = "./";
+				}
+				return treeployFile(dirname, target_path, basename, options);
 			} else {
 				throw new Error("Source path is neither a directory nor a file");
 			}
@@ -135,6 +141,9 @@ function treeployDirectory(source_path, target_path, options){
 function treeployFile(source_dir, target_dir, file_name, options){
 	let source_path = source_dir + file_name;
 
+	let dot_models = undefined;
+	if(options != null){ dot_models = options.dot_models; }
+
 	if(file_name.match(file_name_regex.skipped)){
 		console.log("Skipping file: " + source_path);
 		return Q(false);
@@ -144,7 +153,7 @@ function treeployFile(source_dir, target_dir, file_name, options){
 		// :TODO: make processTreeYaml return a promise :ISSUE6:
 		return Q().then(() => {
 			console.log("Processing tree yaml: " + source_path);
-			processTreeYaml(source_path, target_path, options.dot_models.it);
+			processTreeYaml(source_path, target_dir, dot_models);
 		});
 	}
 
@@ -152,7 +161,7 @@ function treeployFile(source_dir, target_dir, file_name, options){
 		return Q().then(() => {
 			// :TODO: make processDotFile return a promise :ISSUE6:
 			console.log("Processing dot template: " + source_path);
-			processDotFile(source_path, target_path, rel, dot_models)
+			processDotFile(source_dir, target_dir, file_name, dot_models)
 		});
 	}
 
@@ -181,7 +190,7 @@ function processDotTemplate(template_name, template, dot_vars){
 	let output_content    = null;
 
 	try {
-		return output_content = template_function(dot_vars);
+		return output_content = template_function(dot_vars.it);
 	} catch (e) {
 		console.error("Failed to process dot template: '" + template_name + "', error follows:");
 		console.dir(e);
@@ -198,18 +207,18 @@ function processDotTemplate(template_name, template, dot_vars){
  * @param {object}  dot_vars    - Variables to be passed as model to template
  */
 function processDotFile(input_path, output_path, file_name, dot_vars){
-	let template_content  = fs.readFileSync(input_path + rel.path);
+	let template_content  = fs.readFileSync(input_path + file_name);
 
 	let output_content = processDotTemplate(
-		input_path + rel.path, template_content, dot_vars
+		input_path + file_name, template_content, dot_vars
 	);
 
 	// remove dot extension
-	let output_filename = output_path + rel.path;
+	let output_filename = output_path + file_name;
 	output_filename = output_filename.substring(0, output_filename.length-4);
 
 	fs.writeFileSync(output_filename, output_content);
-	file_utils.syncFileMetaData(input_path + rel.path, output_filename);
+	file_utils.syncFileMetaData(input_path + file_name, output_filename);
 }
 
 
