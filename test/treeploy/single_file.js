@@ -7,6 +7,10 @@
 
 require('../common.js');
 
+afterEach(() => {
+	mockfs.restore();
+});
+
 it('Standard File', () => {
 	mockfs({
 		'test.txt' : mockfs.file({
@@ -18,94 +22,99 @@ it('Standard File', () => {
 	});
 
 	return treeploy('test.txt', 'out.txt').then(() => {
-		expect(fs.existsSync  ('out.txt')         ).is.true;
-
-		let stats = fs.statSync('out.txt');
-		expect(stats.isFile()).is.true;
-		expect(stats.uid     ).is.deep.equal(1122);
-		expect(stats.gid     ).is.deep.equal(2211);
-		expect(file_utils.getStatPermissionString(stats)).is.deep.equal('0765');
-
-		let content = fs.readFileSync('out.txt').toString('utf8');
-		expect(content).is.deep.equal('Hello world!');
-	}).finally(() => {
-		mockfs.restore();
+		expectFile('out.txt', {
+			uid  : 1122,
+			gid  : 2211,
+			mode : '0765',
+			content : 'Hello world!'
+		});
 	});
 });
 
-it('tree.yaml to cwd', () => {
-	mockfs({
-		'tree.yaml' : '- test.txt\n- dir/',
+
+describe('tree.yaml', () => {
+	it('To cwd', () => {
+		mockfs({
+			'tree.yaml' : '- test.txt\n- dir/',
+		});
+
+		return treeploy('tree.yaml', '.').then(() => {
+			expectFile('tree.yaml', { content: '- test.txt\n- dir/' } );
+			expectFile('test.txt',  { content: ''                   } );
+			expectDir ('dir');
+		});
 	});
 
-	return treeploy('tree.yaml', '.').then(() => {
-		expect(fs.existsSync  ('tree.yaml')              ).is.true;
-		expect(fs.existsSync  ('test.txt' )              ).is.true;
-		expect(fs.statSync    ('test.txt' ).isFile()     ).is.true;
-		expect(fs.existsSync  ('dir'      )              ).is.true;
-		expect(fs.statSync    ('dir'      ).isDirectory()).is.true;
-	}).finally(() => {
-		mockfs.restore();
+
+	it('To cwd - no overwrite existing file', () => {
+		mockfs({
+			'tree.yaml' : '- test.txt\n- dir/',
+			'test.txt'  : 'Hi',
+		});
+
+		return treeploy('tree.yaml', '.').then(() => {
+			expectFile('tree.yaml', { content: '- test.txt\n- dir/' } );
+			expectFile('test.txt',  { content: 'Hi'                 } );
+			expectDir ('dir');
+		});
+	});
+
+	it('To dir - no trailing slash', () => {
+		mockfs({
+			'tree.yaml' : '- test.txt\n- dir/',
+		});
+
+		return treeploy('tree.yaml', 'output').then(() => {
+			expectFile('tree.yaml');
+			expectDir ('output/');
+			expectNone('output/tree.yaml');
+			expectFile('output/test.txt');
+			expectDir ('output/dir');
+		});
+	});
+
+	it('To dir - with slash', () => {
+		mockfs({
+			'tree.yaml' : '- test.txt\n- dir/',
+		});
+
+		return treeploy('tree.yaml', 'output/').then(() => {
+			expectFile('tree.yaml');
+			expectDir ('output/');
+			expectNone('output/tree.yaml');
+			expectFile('output/test.txt');
+			expectDir ('output/dir');
+		});
 	});
 });
 
-it('tree.yaml to dir no slash', () => {
-	mockfs({
-		'tree.yaml' : '- test.txt\n- dir/',
+describe('doT Template', () => {
+	beforeEach(() => {
+		mockfs({
+			'a.dot' : 'Hi {{= it.name }}',
+		});
 	});
 
-	return treeploy('tree.yaml', 'output').then(() => {
-		expect(fs.existsSync  ('tree.yaml'       )              ).is.true;
-		expect(fs.existsSync  ('output/'         )              ).is.true;
-		expect(fs.statSync    ('output/'         ).isDirectory()).is.true;
-		expect(fs.existsSync  ('output/tree.yaml')              ).is.false;
-		expect(fs.existsSync  ('output/test.txt' )              ).is.true;
-		expect(fs.statSync    ('output/test.txt' ).isFile()     ).is.true;
-		expect(fs.existsSync  ('output/dir'      )              ).is.true;
-		expect(fs.statSync    ('output/dir'      ).isDirectory()).is.true;
-	}).finally(() => {
-		mockfs.restore();
-	});
-});
-
-it('tree.yaml to dir with slash', () => {
-	mockfs({
-		'tree.yaml' : '- test.txt\n- dir/',
+	it('Dot Template', () => {
+		return treeploy('a.dot', 'a', {
+			dot_models: {
+				it: { name: 'bob' }
+			}
+		}).then(() => {
+			expectFile('a.dot', { content: 'Hi {{= it.name }}' });
+			expectFile('a',     { content: 'Hi bob'            });
+		});
 	});
 
-	return treeploy('tree.yaml', 'output/').then(() => {
-		expect(fs.existsSync  ('tree.yaml'       )              ).is.true;
-		expect(fs.existsSync  ('output/'         )              ).is.true;
-		expect(fs.statSync    ('output/'         ).isDirectory()).is.true;
-		expect(fs.existsSync  ('output/tree.yaml')              ).is.false;
-		expect(fs.existsSync  ('output/test.txt' )              ).is.true;
-		expect(fs.statSync    ('output/test.txt' ).isFile()     ).is.true;
-		expect(fs.existsSync  ('output/dir'      )              ).is.true;
-		expect(fs.statSync    ('output/dir'      ).isDirectory()).is.true;
-	}).finally(() => {
-		mockfs.restore();
-	});
-});
-
-it('Dot Template', () => {
-	mockfs({
-		'a.dot' : 'Hi {{= it.name }}',
-	});
-
-	return treeploy('a.dot', 'a', {
-		dot_models: {
-			it: { name: 'bob' }
-		}
-	}).then(() => {
-		expect(fs.existsSync  ('a.dot')              ).is.true;
-		expect(fs.statSync    ('a.dot').isFile()     ).is.true;
-		expect(fs.readFileSync('a.dot').toString()).is.deep.equal('Hi {{= it.name }}');
-		expect(fs.existsSync  ('a'    )              ).is.true;
-		expect(fs.statSync    ('a'    ).isFile()     ).is.true;
-		expect(fs.readFileSync('a'    ).toString()).is.deep.equal('Hi bob');
-
-
-	}).finally(() => {
-		mockfs.restore();
+	it('Dot Template - Non standard output name', () => {
+		return treeploy('a.dot', 'test.txt', {
+			dot_models: {
+				it: { name: 'bob' }
+			}
+		}).then(() => {
+			expectFile('a.dot',   { content: 'Hi {{= it.name }}' });
+			expectNone('a');
+			expectFile('test.txt',{ content: 'Hi bob'            });
+		});
 	});
 });
