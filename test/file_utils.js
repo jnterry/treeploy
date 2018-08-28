@@ -4,12 +4,9 @@
 
 "use strict";
 
-const expect     = require('chai').expect;
-const mockfs     = require('mock-fs');
-const fs         = require('fs');
-const execSync   = require('child_process').execSync;
+require('./common.js');
 
-const file_utils = require('../src/file_utils.js');
+const execSync   = require('child_process').execSync;
 
 describe('getStatPermissionString', () => {
 

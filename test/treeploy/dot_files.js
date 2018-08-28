@@ -2,12 +2,7 @@
  * Test suite for testing the deployment of .dot files
  */
 
-const expect     = require('chai').expect;
-const mockfs     = require('mock-fs');
-const fs         = require('fs');
-
-const file_utils = require('../../src/file_utils.js');
-const treeploy   = require('../../src/index.js');
+require('../common.js');
 
 it('Single template, single model', () => {
 	mockfs({
