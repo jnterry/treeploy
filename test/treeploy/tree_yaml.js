@@ -4,6 +4,10 @@
 
 require('../common.js');
 
+afterEach(() => {
+	mockfs.restore();
+});
+
 describe('Single tree.yaml at root', () => {
 	it('Single file', () => {
 		mockfs({
@@ -14,14 +18,8 @@ describe('Single tree.yaml at root', () => {
 
 		return treeploy('source', 'target')
 			.then(() => {
-				expect(fs.existsSync  ('target/tree.yaml')).is.false;
-
-				expect(fs.existsSync  ('target/test.txt')).is.true;
-				expect(fs.statSync    ('target/test.txt').isFile()).is.true;
-				expect(fs.readFileSync('target/test.txt').toString('utf8')).is.deep.equal('');
-			})
-			.finally(() => {
-				mockfs.restore();
+				expectNone('target/tree.yaml');
+				expectFile('target/test.txt', { content: '' });
 			});
 	});
 
@@ -35,22 +33,10 @@ describe('Single tree.yaml at root', () => {
 
 		return treeploy('source', 'target')
 			.then(() => {
-				expect(fs.existsSync  ('target/tree.yaml')).is.false;
-
-				expect(fs.existsSync  ('target/test.txt')).is.true;
-				expect(fs.statSync    ('target/test.txt').isFile()).is.true;
-				expect(fs.readFileSync('target/test.txt').toString('utf8')).is.deep.equal('');
-
-				expect(fs.existsSync  ('target/stuff.txt')).is.true;
-				expect(fs.statSync    ('target/stuff.txt').isFile()).is.true;
-				expect(fs.readFileSync('target/stuff.txt').toString('utf8')).is.deep.equal('');
-
-				expect(fs.existsSync  ('target/thing.blob')).is.true;
-				expect(fs.statSync    ('target/thing.blob').isFile()).is.true;
-				expect(fs.readFileSync('target/thing.blob').toString('utf8')).is.deep.equal('');
-			})
-			.finally(() => {
-				mockfs.restore();
+				expectNone('target/tree.yaml');
+				expectFile('target/test.txt',   { content: '' });
+				expectFile('target/stuff.txt',  { content: '' });
+				expectFile('target/thing.blob', { content: '' });
 			});
 	});
 
@@ -63,13 +49,8 @@ describe('Single tree.yaml at root', () => {
 
 		return treeploy('source', 'target')
 			.then(() => {
-				expect(fs.existsSync  ('target/tree.yaml')).is.false;
-
-				expect(fs.existsSync  ('target/test.txt')).is.true;
-				expect(fs.statSync    ('target/test.txt').isDirectory()).is.true;
-			})
-			.finally(() => {
-				mockfs.restore();
+				expectNone('target/tree.yaml');
+				expectDir ('target/test.txt' );
 			});
 	});
 
@@ -82,13 +63,8 @@ describe('Single tree.yaml at root', () => {
 
 		return treeploy('source', 'target')
 			.then(() => {
-				expect(fs.existsSync  ('target/tree.yaml')).is.false;
-
-				expect(fs.existsSync  ('target/test.txt')).is.true;
-				expect(fs.statSync    ('target/test.txt').isDirectory()).is.true;
-			})
-			.finally(() => {
-				mockfs.restore();
+				expectNone('target/tree.yaml');
+				expectDir ('target/test.txt' );
 			});
 	});
 
@@ -101,13 +77,9 @@ describe('Single tree.yaml at root', () => {
 
 		return treeploy('source', 'target')
 			.then(() => {
-				expect(fs.existsSync  ('target/tree.yaml')).is.false;
-
-				expect(fs.existsSync  ('target/dir_a')).is.true;
-				expect(fs.statSync    ('target/dir_b').isDirectory()).is.true;
-			})
-			.finally(() => {
-				mockfs.restore();
+				expectNone('target/tree.yaml');
+				expectDir ('target/dir_a');
+				expectDir ('target/dir_b');
 			});
 	});
 
@@ -120,19 +92,10 @@ describe('Single tree.yaml at root', () => {
 
 		return treeploy('source', 'target')
 			.then(() => {
-				expect(fs.existsSync  ('target/tree.yaml')).is.false;
-
-				expect(fs.existsSync  ('target/dir_a')).is.true;
-				expect(fs.statSync    ('target/dir_b').isDirectory()).is.true;
-
-				expect(fs.existsSync  ('target/dir_b/nested_a')).is.true;
-				expect(fs.statSync    ('target/dir_b/nested_a').isDirectory()).is.true;
-
-				expect(fs.existsSync  ('target/dir_b/file.txt')).is.true;
-				expect(fs.statSync    ('target/dir_b/file.txt').isFile()).is.true;
-			})
-			.finally(() => {
-				mockfs.restore();
+				expectNone('target/tree.yaml');
+				expectDir ('target/dir_a');
+				expectDir ('target/dir_b/nested_a');
+				expectFile('target/dir_b/file.txt', { content: '' });
 			});
 	});
 
@@ -146,18 +109,13 @@ describe('Single tree.yaml at root', () => {
 
 		return treeploy('source', 'target')
 			.then(() => {
-				expect(fs.existsSync  ('target/tree.yaml')).is.false;
-
-				expect(fs.existsSync   ('target/text.txt')).is.true;
-				let stats = fs.statSync('target/text.txt');
-				expect(stats.isFile()).is.true;
-				expect(stats.uid).is.deep.equal(1234);
-				expect(stats.gid).is.deep.equal(10);
-				expect(file_utils.getStatPermissionString(stats)).is.deep.equal('0760');
-
-			})
-			.finally(() => {
-				mockfs.restore();
+				expectNone('target/tree.yaml');
+				expectFile('target/text.txt', {
+					uid     : 1234,
+					gid     : 10,
+					mode    : '0760',
+					content : '',
+				});
 			});
 	});
 
@@ -170,18 +128,13 @@ describe('Single tree.yaml at root', () => {
 
 		return treeploy('source', 'target')
 			.then(() => {
-				expect(fs.existsSync  ('target/tree.yaml')).is.false;
-
-				expect(fs.existsSync   ('target/dir')).is.true;
-				let stats = fs.statSync('target/dir');
-				expect(stats.isDirectory()).is.true;
-				expect(stats.uid).is.deep.equal(1234);
-				expect(stats.gid).is.deep.equal(10);
-				expect(file_utils.getStatPermissionString(stats)).is.deep.equal('0760');
-
-			})
-			.finally(() => {
-				mockfs.restore();
+				expectNone('target/tree.yaml');
+				expectDir ('target/dir', {
+					uid     : 1234,
+					gid     : 10,
+					mode    : '0760',
+					content : '',
+				});
 			});
 	});
 });
@@ -201,32 +154,17 @@ describe('Multiple tree.yamls', () => {
 
 		return treeploy('source', 'target')
 			.then(() => {
-				expect(fs.existsSync('target/tree.yaml'       )              ).is.false;
-				expect(fs.existsSync('target/dir_a/tree.yaml' )              ).is.false;
-				expect(fs.existsSync('target/dir_b/tree.yaml' )              ).is.false;
+				expectNone('target/tree.yaml'       );
+				expectNone('target/dir_a/tree.yaml' );
+				expectNone('target/dir_b/tree.yaml' );
 
-				expect(fs.existsSync('target/dir_a/file_1.txt')              ).is.true;
-				expect(fs.statSync  ('target/dir_a/file_1.txt').isFile()     ).is.true;
+				expectFile('target/dir_a/file_1.txt');
+				expectFile('target/dir_a/file_2.txt');
+				expectFile('target/dir_a/file_3.txt');
+				expectDir ('target/dir_b/dir');
+				expectFile('target/dir_b/dir/hi.txt');
+				expectFile('target/dir_b/stuff.txt' );
 
-				expect(fs.existsSync('target/dir_a/file_2.txt')              ).is.true;
-				expect(fs.statSync  ('target/dir_a/file_2.txt').isFile()     ).is.true;
-
-				expect(fs.existsSync('target/dir_a/file_3.txt')              ).is.true;
-				expect(fs.statSync  ('target/dir_a/file_3.txt').isFile()     ).is.true;
-
-
-				expect(fs.existsSync('target/dir_b/dir'       )              ).is.true;
-				expect(fs.statSync  ('target/dir_b/dir'       ).isDirectory()).is.true;
-
-				expect(fs.existsSync('target/dir_b/dir/hi.txt')              ).is.true;
-				expect(fs.statSync  ('target/dir_b/dir/hi.txt').isFile()     ).is.true;
-
-				expect(fs.existsSync('target/dir_b/stuff.txt' )              ).is.true;
-				expect(fs.statSync  ('target/dir_b/stuff.txt' ).isFile()     ).is.true;
-
-			})
-			.finally(() => {
-				mockfs.restore();
 			});
 	});
 });
@@ -240,10 +178,7 @@ describe('Invalid tree.yamls', (done) => {
 			},
 		});
 
-		return expect(
-			treeploy('source', 'target')
-				.finally(() => mockfs.restore())
-		).to.be.rejected;
+		return expect(treeploy('source', 'target')).to.be.rejected;
 	});
 
 	it('Malformed yaml', () => {
@@ -253,10 +188,7 @@ describe('Invalid tree.yamls', (done) => {
 			},
 		});
 
-		return expect(
-			treeploy('source', 'target')
-				.finally(() => mockfs.restore())
-		).to.be.rejected;
+		return expect(treeploy('source', 'target')).to.be.rejected;
 	});
 
 	it('No root list', () => {
@@ -270,9 +202,6 @@ a: list
 			},
 		});
 
-		return expect(
-			treeploy('source', 'target')
-				.finally(() => mockfs.restore())
-		).to.be.rejected;
+		return expect(treeploy('source', 'target')).to.be.rejected;
 	});
 });
