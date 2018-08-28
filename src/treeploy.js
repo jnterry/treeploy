@@ -8,7 +8,7 @@ const path       = require('path');
 
 const FileDriverLocal = require('./file_drivers/local.js');
 
-const makeLogger = require('./log.js')
+const makeLogger = require('./log.js');
 
 dot_engine.templateSettings = {
   evaluate      : /\{\{([\s\S]+?)\}\}/g,
@@ -160,7 +160,7 @@ async function treeployFile(fdriver, source_path, target_path, options){
 	log.debug("Copying file " + source_path + " to " + target_path);
 
 	await fdriverCopy(fdriver, source_path, target_path);
-	return file_utils.syncFileMetaData(source_path, target_path);
+	fdriverCopyAttributes(fdriver, source_path, target_path);
 }
 
 /**
@@ -316,7 +316,13 @@ async function processTreeYaml(fdriver, input_file, output_root_dir, dot_vars){
 	}
 }
 
-
+/**
+ * Takes the permissions, owner, etc of an input file and applies them
+ * to an output file, without changing the file's contents
+ *
+ * @param in_path {string}  - Path to the file whose meta data you wish to copy
+ * @param out_path {string} - Path to file to apply to meta data to
+ */
 async function fdriverCopyAttributes(fdriver, source_path, target_path){
 	let attr = await fdriver.source.getAttributes(source_path);
 	return fdriver.target.setAttributes(target_path, attr);

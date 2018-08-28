@@ -80,6 +80,15 @@ FileDriverLocal.prototype.mkdir = async function(path){
 	return fse.ensureDir(path); // :TODO: remove fse dependency
 }
 
+/**
+ * Applies a mode, owner and group to an existing file path
+ *
+ * @param {string} path         - Path of the file/directory to modify
+ * @param {Object} options      - All options for the file
+ * @param {string} options.mode - Representation of file mode, eg: '0644'w
+ * @param {(string|number)} options.owner - Username or uid of file owner
+ * @param {(string|number)} options.group - Group name or gid of file's group
+ */
 FileDriverLocal.prototype.setAttributes = async function(path, attributes){
 	log.trace("Updating file permissions for " + path);
 
