@@ -44,11 +44,25 @@ const file_name_regex = {
  * else a promise which is rejected
  */
 function treeploy(source_path, target_path, options){
-	if(options == null){
-		options = {};
+	if(options            == null) { options            = {}; }
+	if(options.verbosity  == null) { options.verbosity  =  0; }
+	if(options.dot_models == null) { options.dot_models = {}; }
+
+	if(typeof options.dot_models != 'object'){
+		log.warn('Expected options.dot_models to be an object mapping doT.js varnames to values - dot_models will be ignored, template evaluation may fail');
+		options.dot_models = [];
+	} else {
+		// we need to guarentee that the dot_engine.varname order matches up
+		// with the order of parameters we pass to templates, convert everything
+		// to an array here and use that from now on
+
+		let models = Object.keys(options.dot_models);
+
+		options.dot_models = models.map((x) => options.dot_models[x]);
+		dot_engine.templateSettings.varname = models.join(',');
 	}
 
-	global.log = makeLogger(options.verbosity || 0);
+	global.log = makeLogger(options.verbosity);
 
 	return Q(fse
 		.pathExists(source_path)
@@ -76,11 +90,30 @@ function treeployDirectory(source_path, target_path, options){
 	if(!target_path.endsWith('/')){ target_path += '/'; }
 
 	return fse
-		.ensureDir(target_path)
+		.exists(target_path)
+		.then((does_exist) => {
+			if(!does_exist){ return; }
+
+			return fse
+				.stat(target_path)
+				.then((stat) => {
+					if(!stat.isDirectory()){
+						if(options.overwrite){
+							log.info("Removing conflicting non-directory in place of: " + target_path);
+							return fse.remove(target_path);
+						} else {
+							throw new Error(
+								"Path '" + target_path +
+								"' exists as non-directory and options.overwrite is not set"
+							);
+						}
+					}
+				})
+		})
+		.then(() => fse.ensureDir(target_path))
 		.then(() => file_utils.syncFileMetaData(source_path, target_path))
 		.then(() => fse.readdir(source_path))
 		.then((entries) => {
-
 			// we need delay tree yaml files to the end since they may manipulate the
 			// permisions of normal files
 			let tree_files = [];
@@ -168,11 +201,12 @@ function processDotTemplate(template_name, template, dot_vars){
 	let output_content    = null;
 
 	try {
-		return output_content = template_function(dot_vars.it);
+		return output_content = template_function.apply(null, dot_vars);
 	} catch (e) {
-		console.error("Failed to process dot template: '" + template_name + "', error follows:");
-		console.dir(e);
-		throw new Error("Invalid dot template: " + template_name);
+		throw new Error(
+			"Failed to process dot template: '" +
+			template_name + "': " + e.toString()
+		);
 	}
 }
 
@@ -229,10 +263,11 @@ function processTreeYaml(input_file, output_root_dir, dot_vars){
 		}
 
 		if(!Array.isArray(tree)){
-			log.error("Expected an array of directory contents for '" +
-								output_root_dir + "' in: '" + input_file + "', got: ");
-			console.dir(tree);
-			throw new Error("Invalid tree.yaml file: " + input_file);
+			throw new Error(
+				"Invalid tree.yaml file '" + input_file +
+				"' - expected an array of directory contents for '" +
+				output_root_dir + "'"
+			);
 		}
 
 		for(let entry of tree){
@@ -246,9 +281,11 @@ function processTreeYaml(input_file, output_root_dir, dot_vars){
 				let keys = Object.keys(entry);
 
 				if(keys.length !== 1){
-					log.error("Expected single entry name to map to entry options, got: ");
-					console.dir(entry);
-					throw new Error("Invalid tree.yaml file: " + input_file);
+					throw new Error(
+						"Invalid tree.yaml file '" + input_file +
+						"' - expected single name to map to options object, got: " +
+						JSON.toString(entry)
+					);
 				}
 
 				name = keys[0];
