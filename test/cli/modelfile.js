@@ -10,6 +10,10 @@ let dot_template_dump_data = `{
 "data": {{= JSON.stringify(data, null, '  ') }}
 }`;
 
+afterEach(() => {
+	mockfs.restore();
+});
+
 function runTestExpectError(name, modelfile_name, modelfile_content, args){
 	it(name, () => {
 		mockfs({
@@ -21,9 +25,6 @@ function runTestExpectError(name, modelfile_name, modelfile_content, args){
 			.then((exit_code) => {
 				expect(exit_code).is.not.deep.equal(0);
 				expectNone('model.json');
-			})
-			.finally(() => {
-				mockfs.restore();
 			});
 	});
 }
@@ -38,13 +39,7 @@ function runTestExpectSuccess(name, modelfile_name, modelfile_content, args, exp
 		return treeploy_cli(['model.json.dot', 'model.json'].concat(args))
 			.then((exit_code) => {
 				expect(exit_code).is.deep.equal(0);
-				expectFile('model.json');
-
-				let data = JSON.parse(fs.readFileSync('model.json'));
-				expect(data.data).is.deep.equal(expected_model);
-			})
-			.finally(() => {
-				mockfs.restore();
+				expectFile('model.json', { content: { data: expected_model }} );
 			});
 	});
 }

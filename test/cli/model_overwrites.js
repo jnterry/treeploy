@@ -12,6 +12,10 @@ let dot_template_dump_data = `{
 "db" : {{= JSON.stringify(db,  null, '  ') }}
 }`;
 
+afterEach(() => {
+	mockfs.restore();
+});
+
 it('Complex scenario', () => {
 
 	mockfs({
@@ -41,25 +45,20 @@ it('Complex scenario', () => {
 		])
 		.then((exit_code) => {
 			expect(exit_code).is.deep.equal(0);
-			expectFile('model.json');
-
-			let data = JSON.parse(fs.readFileSync('model.json'));
-
-			expect(data).is.deep.equal({
-				web: {
-					domain: 'example.com',
-					port  : 443,
-				},
-				db: {
-					host: 'db.example.com',
-					port: 3306,
-					username: 'root',
-					password: '1234',
-					thing: { goes: { here: 8 } },
-				},
+			expectFile('model.json', {
+				content: {
+					web: {
+						domain: 'example.com',
+						port  : 443,
+					},
+					db: {
+						host: 'db.example.com',
+						port: 3306,
+						username: 'root',
+						password: '1234',
+						thing: { goes: { here: 8 } },
+					},
+				}
 			});
-		})
-		.finally(() => {
-			mockfs.restore();
 		});
 });

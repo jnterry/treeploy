@@ -6,6 +6,10 @@
 
 require('../common.js');
 
+afterEach(() => {
+	mockfs.restore();
+});
+
 let source_structure = {
 	'thing.blob' : mockfs.file({
 		content : '123',
@@ -43,8 +47,6 @@ it('Basic Usage', () => {
 		.then((exit_code) => {
 			expect(exit_code).is.deep.equal(0);
 			checkTarget('target');
-		}).finally(() => {
-			mockfs.restore();
 		});
 });
 
@@ -57,8 +59,6 @@ it('Relative and absolute paths', () => {
 		.then((exit_code) => {
 			expect(exit_code).is.deep.equal(0);
 			checkTarget('/absolute/path/specified/here');
-		}).finally(() => {
-			mockfs.restore();
 		});
 });
 
@@ -72,8 +72,6 @@ it('Overwrite existing target', () => {
 		.then((exit_code) => {
 			expect(exit_code).is.deep.equal(0);
 			checkTarget('existing');
-		}).finally(() => {
-			mockfs.restore();
 		});
 });
 
@@ -86,8 +84,6 @@ it('If we specify --help then nothing gets done', () => {
 		.then((exit_code) => {
 			expect(exit_code).is.deep.equal(0);
 			expectNone('target');
-		}).finally(() => {
-			mockfs.restore();
 		});
 });
 
@@ -100,8 +96,6 @@ it('-h can be specified without IO paths', () => {
 		.then((exit_code) => {
 			expect(exit_code).is.deep.equal(0);
 			expectNone('target');
-		}).finally(() => {
-			mockfs.restore();
 		});
 });
 
@@ -114,8 +108,6 @@ it('If we specify -h then nothing gets done', () => {
 		.then((exit_code) => {
 			expect(exit_code).is.deep.equal(0);
 			expectNone('target');
-		}).finally(() => {
-			mockfs.restore();
 		});
 });
 
@@ -128,8 +120,6 @@ it('Specifing no arguments causes bad exit code', () => {
 		.then((exit_code) => {
 			expect(exit_code).is.deep.equal(1);
 			expectNone('target');
-		}).finally(() => {
-			mockfs.restore();
 		});
 });
 
@@ -142,8 +132,6 @@ it('Specifing flag before IO paths causes bad exit code', () => {
 		.then((exit_code) => {
 			expect(exit_code).is.deep.equal(1);
 			expectNone('target');
-		}).finally(() => {
-			mockfs.restore();
 		});
 });
 
@@ -156,8 +144,6 @@ it('Specifing only source causes bad exit code', () => {
 		.then((exit_code) => {
 			expect(exit_code).is.deep.equal(1);
 			expectNone('target');
-		}).finally(() => {
-			mockfs.restore();
 		});
 });
 
@@ -170,8 +156,6 @@ it('Invalid flags causes bad exit code', () => {
 		.then((exit_code) => {
 			expect(exit_code).is.deep.equal(1);
 			expectNone('target');
-		}).finally(() => {
-			mockfs.restore();
 		});
 });
 
@@ -195,7 +179,5 @@ it('Single file mode acts as cp --preserve does if source is not special file', 
 
 			expectFile('in.txt',  file_opts);
 			expectFile('out.txt', file_opts);
-		}).finally(() => {
-			mockfs.restore();
 		});
 });

@@ -1,22 +1,22 @@
 {
-  "name": "treeploy",
-  "version": "0.4.0",
-  "description": "Directory tree deployment script",
+	"name": "treeploy",
+	"version": "0.4.0",
+	"description": "Directory tree deployment script",
 	"homepage": "https://github.com/jnterry/treeploy",
-  "main": "src/index.js",
+	"main": "src/treeploy.js",
 	"repository": {
 		"type": "git",
 		"url": "git://github.com/jnterry/treeploy.git"
 	},
-  "scripts": {
+	"scripts": {
 		"test": "sudo ./node_modules/.bin/mocha test/all.js --reporter spec",
 		"cover": "node_modules/istanbul/lib/cli.js cover node_modules/mocha/bin/_mocha --root ./src/ --include-all-sources -- -R spec test/all.js"
 	},
-  "author": "Jamie Terry",
-  "license": "MIT",
-  "publishConfig": {
-    "access": "public"
-  },
+	"author": "Jamie Terry",
+	"license": "MIT",
+	"publishConfig": {
+		"access": "public"
+	},
 	"dependencies": {
 		"readline-sync": "1.4.9",
 		"node-yaml": "3.1.1",
@@ -28,6 +28,7 @@
 	"devDependencies": {
 		"mocha": "5.2.0",
 		"chai": "4.1.2",
+		"chai-as-promised": "7.1.1",
 		"istanbul": "0.4.5",
 		"mock-fs": "4.6.0",
 		"coveralls": "3.0.2",

@@ -2,14 +2,17 @@
  * Code common to all test cases
  */
 
-global.expect       = require('chai').expect;
 global.mockfs       = require('mock-fs');
-global.fs           = require('fs');
 
 global.file_utils   = require('../src/file_utils.js');
-global.treeploy     = require('../src/index.js');
+global.treeploy     = require('../src/treeploy.js');
 global.treeploy_cli = require('../src/cli.js');
 
+const chai = require('chai');
+chai.use(require('chai-as-promised'));
+global.expect = chai.expect;
+
+const fs = require('fs');
 
 function genName(name){
 	if(typeof name === 'string'){ return name; }
@@ -63,6 +66,16 @@ global.expectFile = function(name_arg, opts){
 	let stats = fs.statSync(name);
 	expect(stats.isFile()).is.true;
 	checkStats(stats, opts);
+
+	if(opts != null && opts.content != null){
+		let content = fs.readFileSync(name).toString();
+
+		if (typeof opts.content === 'object'){
+			content = JSON.parse(content);
+		}
+
+		expect(content).is.deep.equal(opts.content);
+	}
 }
 
 global.expectNone = function(name_arg){
