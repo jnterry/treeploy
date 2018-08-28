@@ -9,8 +9,8 @@
 		"url": "git://github.com/jnterry/treeploy.git"
 	},
 	"scripts": {
-		"test": "sudo ./node_modules/.bin/mocha test/all.js --reporter spec",
-		"cover": "node_modules/istanbul/lib/cli.js cover node_modules/mocha/bin/_mocha --root ./src/ --include-all-sources -- -R spec test/all.js"
+		"test": "sudo -E env \"PATH=$PATH\" ./node_modules/.bin/mocha test/treeploy/dot_files.js --reporter spec",
+		"cover": "sudo -E env \"PATH=$PATH\" node_modules/istanbul/lib/cli.js cover node_modules/mocha/bin/_mocha --root ./src/ --include-all-sources -- -R spec test/all.js"
 	},
 	"author": "Jamie Terry",
 	"license": "MIT",
