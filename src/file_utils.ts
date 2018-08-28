@@ -14,3 +14,4 @@ function getStatPermissionString(stats : fs.Stats){
 }
 
 export { getStatPermissionString };
+export default { getStatPermissionString };

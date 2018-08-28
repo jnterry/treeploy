@@ -6,7 +6,7 @@ const yaml       = require('node-yaml');
 const dot_engine = require('dot');
 const path       = require('path');
 
-const FileDriverLocal = require('./file_drivers/local.js');
+const FileDriverLocal = require('./file_drivers/local.js').default;
 
 const log = require('./log.js').default;
 
