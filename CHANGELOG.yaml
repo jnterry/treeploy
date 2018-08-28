@@ -1,3 +1,12 @@
+- v0.4.0:
+    date: '2018-08-27'
+    name: 'Multiple dot models'
+    breaking:
+      - CLI changed to no longer accept doT.js model file as optional 3rd argument
+    features:
+      - Add --modelfile flag to replace old model file loading, but now it is possible to use the flag multiple times to load multiple files
+      - Add --model flag to specify single field of dot model
+      - Add --modelcmd flag to generate model dynamically by running some process
 - v0.3.2:
     date: '2018-08-27'
     name: 'Packaging Fixes'
