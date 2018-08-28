@@ -65,10 +65,21 @@ However there is special handling of some files in the input tree:
 
 Any files with a `.dot` extension will be processed by the [doT.js template engine](http://olado.github.io/doT/index.html) before being written to the output directory. Additionally the `.dot` extension will be removed, hence the file `nginx.conf.dot` in the input tree would produce the file `nginx.conf` in the output tree.
 
-The dot template engine will be passed variables produced from so called parameter files. These may have the following formats:
-- `.yaml` or `.yml` -> loaded using [node-yaml](https://www.npmjs.com/package/node-yaml) library
-- `.json` -> loaded by reading the file contents and calling `JSON.parse`
-- `.js` -> loaded by using `require(...)`, thus the variables to be used should be exported from the module with `module.exports = {...};`
+The doT.js template engine will be passed a model which can be constructed by utilising the following command line flags:
+
+- `--model <field> <value>`
+  - Sets single field of model
+  - Value may be string, int, float or boolean
+  - Example: `--model db.username 'root' --model db.password 'letmein'`
+  - Example: `--model version.sha $(git rev-parse HEAD)`
+- `--modelfile [field] <file>`
+  - Loads a json or yaml file to set some part of the model
+  - [field] argument is optional, if left out then file will be loaded as complete model
+- `--modelcmd [field] <cmd>`
+  - Runs some command and parses its output as JSON to set some part of the model
+  - [field] argument is optional, if left out then JSON will be loaded as complete model
+
+The model will be built up by considering all such --model* flags from left to right and merging the results together, overwriting values if fields are repeated. This allows for having a base parameter file which is overridden by later flags, for example with production specific secrets.
 
 ## tree.yaml
 
