@@ -1,3 +1,7 @@
+- v0.4.2:
+    date: '2018-08-29'
+    fixes:
+      - Fix bin/treeploy script and hence packaging by pkg (also add tests of pkg output to travis to prevent these issues in future)
 - v0.4.1:
     date: '2018-08-28'
     refactors:
