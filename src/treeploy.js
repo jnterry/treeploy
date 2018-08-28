@@ -170,7 +170,11 @@ function treeployFile(source_path, target_path, options){
 	}
 
 	if(file_name.match(file_name_regex.template)){
-		return processDotFile(source_path, target_path, dot_models)
+		return Q().then(() => {
+			// :TODO: make processDotFile return a promise :ISSUE6:
+			log.trace("Processing dot template: " + source_path);
+			processDotFile(source_path, target_path, dot_models)
+		});
 	}
 
 	// otherwise this is just a standard file...
@@ -213,21 +217,19 @@ function processDotTemplate(template_name, template, dot_vars){
  * @param {string}  output_path - Path to write the result to
  * @param {object}  dot_vars    - Variables to be passed as model to template
  */
-async function processDotFile(input_path, output_path, dot_vars){
-	log.trace("Processing dot template: " + input_path);
-
+function processDotFile(input_path, output_path, dot_vars){
 	if(output_path.endsWith('.dot')){
 		output_path = output_path.substring(0, output_path.length-4);
 	}
 
-	let template_content = await fse.readFile(input_path);
+	let template_content  = fs.readFileSync(input_path);
 
 	let output_content = processDotTemplate(
 		input_path, template_content, dot_vars
 	);
 
-	return fse.writeFile(output_path, output_content)
-						.then(() => file_utils.syncFileMetaData(input_path, output_path));
+	fs.writeFileSync(output_path, output_content);
+	file_utils.syncFileMetaData(input_path, output_path);
 }
 
 
