@@ -5,7 +5,6 @@
 "use strict";
 
 require('../common.js');
-const fs = require('fs');
 
 let dot_template_dump_data = `{
 "data": {{= JSON.stringify(data, null, '  ') }}
@@ -26,10 +25,7 @@ function runTestExpectSuccess(name, args, expected_model){
 		return treeploy_cli(['model.json.dot', 'model.json'].concat(args))
 			.then((exit_code) => {
 				expect(exit_code).is.deep.equal(0);
-				expectFile('model.json');
-
-				let data = JSON.parse(fs.readFileSync('model.json'));
-				expect(data.data).is.deep.equal(expected_model);
+				expectFile('model.json', { contents: expected_model });
 			});
 	});
 }
