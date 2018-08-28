@@ -2,12 +2,7 @@
  * Test suite for testing the deployment from tree.yaml files
  */
 
-const expect     = require('chai').expect;
-const mockfs     = require('mock-fs');
-const fs         = require('fs');
-
-const file_utils = require('../../src/file_utils.js');
-const treeploy   = require('../../src/index.js');
+require('../common.js');
 
 describe('Single tree.yaml at root', () => {
 	it('Single file', () => {
@@ -233,5 +228,51 @@ describe('Multiple tree.yamls', () => {
 			.finally(() => {
 				mockfs.restore();
 			});
+	});
+});
+
+
+describe('Invalid tree.yamls', (done) => {
+	it('Empty yaml', () => {
+		mockfs({
+			source : {
+				'tree.yaml': ''
+			},
+		});
+
+		return expect(
+			treeploy('source', 'target')
+				.finally(() => mockfs.restore())
+		).to.be.rejected;
+	});
+
+	it('Malformed yaml', () => {
+		mockfs({
+			source : {
+				'tree.yaml': '::-:\n:-::'
+			},
+		});
+
+		return expect(
+			treeploy('source', 'target')
+				.finally(() => mockfs.restore())
+		).to.be.rejected;
+	});
+
+	it('No root list', () => {
+		mockfs({
+			source : {
+				'tree.yaml': `
+bad: entry
+should: be
+a: list
+				`,
+			},
+		});
+
+		return expect(
+			treeploy('source', 'target')
+				.finally(() => mockfs.restore())
+		).to.be.rejected;
 	});
 });

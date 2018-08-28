@@ -2,7 +2,6 @@
  * Code common to all test cases
  */
 
-global.expect       = require('chai').expect;
 global.mockfs       = require('mock-fs');
 global.fs           = require('fs');
 
@@ -10,6 +9,9 @@ global.file_utils   = require('../src/file_utils.js');
 global.treeploy     = require('../src/index.js');
 global.treeploy_cli = require('../src/cli.js');
 
+const chai = require('chai');
+chai.use(require('chai-as-promised'));
+global.expect = chai.expect;
 
 function genName(name){
 	if(typeof name === 'string'){ return name; }
