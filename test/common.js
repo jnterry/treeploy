@@ -68,6 +68,11 @@ global.expectFile = function(name_arg, opts){
 
 	if(opts != null && opts.content != null){
 		let content = fs.readFileSync(name).toString();
+
+		if (typeof opts.content === 'object'){
+			content = JSON.parse(content);
+		}
+
 		expect(content).is.deep.equal(opts.content);
 	}
 }
