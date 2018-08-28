@@ -11,6 +11,7 @@
     // "declarationMap": true,                /* Generates a sourcemap for each corresponding '.d.ts' file. */
 
     "sourceMap": true,                     /* Generates corresponding '.map' file. */
+		"rootDir": "./src",
     "outDir": "./dist",                        /* Redirect output structure to the directory. */
     "removeComments": false,                /* Do not emit comments to output. */
 
@@ -32,7 +33,7 @@
     "esModuleInterop": true,
 
     /* Source Map Options */
-    "sourceRoot": "./src",
+    "sourceRoot": ".",
   },
 
 	"include": [
