@@ -27,13 +27,13 @@ FileDriverLocal.uri_regex = /.*/;
 // FileDriverLocal can be used to modify the file system
 FileDriverLocal.is_read_only = false;
 
-/**
- * Function which returns a promise that resolves
- * to the contents of some file
- */
+
+//FileDriverLocal.prototype.readFile = promisify(fs.readFile);
+// ^ ^ ^ This is the implementation we want
+// Below is a temporary work around for:
+// https://github.com/tschaub/mock-fs/issues/245
 FileDriverLocal.prototype.readFile = function(path){
-	// Temporary work around for:
-	// https://github.com/tschaub/mock-fs/issues/245
+
 	return new Promise((resolve, reject) => {
 		try {
 			let content = fs.readFileSync(path);
@@ -42,11 +42,6 @@ FileDriverLocal.prototype.readFile = function(path){
 			reject(e);
 		}
 	});
-}
-
-FileDriverLocal.prototype.writeFile = function(file, content){
-	if(this.no_op_writes){ return; }
-	return writeFileAsync(file, content);
 }
 
 FileDriverLocal.prototype.exists    = promisify(fs.exists);
@@ -63,6 +58,12 @@ FileDriverLocal.prototype.getAttributes = async function(path){
 	};
 }
 
+
+FileDriverLocal.prototype.writeFile = function(file, content){
+	if(this.no_op_writes){ return; }
+	return writeFileAsync(file, content);
+}
+
 /**
  * Removes a file or directory at specified path
  */
@@ -77,6 +78,13 @@ FileDriverLocal.prototype.remove = async function(path){
 	}
 }
 
+/**
+ * Makes a directory, recursively creates any required parents and
+ * also deletes any conflicts if a parent component of the path already
+ * exists but as a file
+ *
+ * @param {string} dir_path - Path of the directory to create
+ */
 FileDriverLocal.prototype.mkdir = async function(dir_path){
 	if(this.no_op_writes){ return; }
 
