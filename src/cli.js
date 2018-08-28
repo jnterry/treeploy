@@ -11,6 +11,7 @@ const yaml        = require('node-yaml');
 const parseArgs   = require('minimist');
 const path        = require('path');
 const Q           = require('q');
+const execSync    = require('child_process').execSync;
 
 const treeploy    = require('./index.js');
 
@@ -201,17 +202,13 @@ function parseOptionalArguments(arg_list){
 				let value = arg_list[i+2];
 
 				if(field == null || field.startsWith('-')){
-					throw new Error("Expected <field> to be specified for argument " +
+					throw new Error("Expected <field> to be specified for flag " +
 													arg + ", got: " + field);
 				}
 
 				if(value == null || value.startsWith('-')){
 					value = field;
 					field = '';
-					if(value == null || value.startsWith('-')){
-						throw new Error("Expected value to be specified for argument " +
-														arg + ", got: " + value);
-					}
 					i += 1; // skip the single value argument
 				} else {
 					i += 2; // skip the <field> <value> arguments
@@ -311,7 +308,14 @@ function processFlagModel(field_name, field_value, options){
 }
 
 function processFlagModelCmd(field, cmd, options){
-
+	let cmd_result = execSync(cmd);
+	let cmd_stdout = cmd_result.toString('utf8');
+	try {
+		let data = JSON.parse(cmd_stdout);
+		setModelField(field, data, options);
+	} catch (e) {
+		throw new Error("modelcmd output invalid JSON: " + e.message);
+	}
 }
 
 /**

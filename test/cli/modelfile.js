@@ -86,10 +86,10 @@ data:
 );
 
 runTestExpectSuccess(
-	'Single yaml for specified field',
-	'data.yaml',
+	'Single yml for specified field',
+	'data.yml',
 	'a: 3\nb: 5',
-	['--modelfile', 'data', 'data.yaml'],
+	['--modelfile', 'data', 'data.yml'],
 	{ a: 3, b: 5 }
 );
 
@@ -103,5 +103,18 @@ runTestExpectSuccess(
 			name: 'Tim',
 			age: 32
 		}
+	}
+);
+
+runTestExpectSuccess(
+	'Other flags can terminate arguments to --modelfile flag',
+	'data.json',
+	'{ "data": { "name": "Tim", "age": 32 } }',
+	// if we don't recognise the -v then we may try to set the field 'data.json'
+	// to the contents of the file '-v'
+	['--modelfile', 'data.json', '-v'],
+	{
+		name: 'Tim',
+		age: 32
 	}
 );
