@@ -1,3 +1,9 @@
+- v0.4.1:
+    date: '2018-08-28'
+    refactors:
+      - Port to typescript
+      - Remove alot of the syncronous code, use async await construct
+      - Add FileDriverLocal type in preperation for adding support for remote systems
 - v0.4.0:
     date: '2018-08-27'
     name: 'Multiple dot models'
