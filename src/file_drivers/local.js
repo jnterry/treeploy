@@ -3,8 +3,8 @@
  */
 
 const fs            = require('fs');
-const fse           = require('fs-extra');
 const { promisify } = require('util');
+const path          = require('path');
 
 const file_utils    = require('../file_utils.js')
 
@@ -19,6 +19,7 @@ let chownAsync     = promisify(fs.chown);
 let chmodAsync     = promisify(fs.chmod);
 let unlinkAsync    = promisify(fs.unlink);
 let rmdirAsync     = promisify(fs.rmdir);
+let mkdirAsync     = promisify(fs.mkdir);
 
 // File driver local can attempt to handle any path (for now)
 FileDriverLocal.uri_regex = /.*/;
@@ -35,7 +36,7 @@ FileDriverLocal.prototype.readFile = function(path){
 	// https://github.com/tschaub/mock-fs/issues/245
 	return new Promise((resolve, reject) => {
 		try {
-			let content = fse.readFileSync(path);
+			let content = fs.readFileSync(path);
 			resolve(content)
 		} catch (e) {
 			reject(e);
@@ -76,8 +77,20 @@ FileDriverLocal.prototype.remove = async function(path){
 	}
 }
 
-FileDriverLocal.prototype.mkdir = async function(path){
-	return fse.ensureDir(path); // :TODO: remove fse dependency
+FileDriverLocal.prototype.mkdir = async function(dir_path){
+	if(this.no_op_writes){ return; }
+
+	if(await this.exists(dir_path)){
+		let stat = await this.stat(dir_path);
+		if(stat.isDirectory()){
+			return true;
+		}
+		await this.remove(dir_path);
+	}
+
+	await this.mkdir(path.dirname(dir_path));
+
+	return mkdirAsync(dir_path);
 }
 
 /**
