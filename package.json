@@ -27,6 +27,7 @@
 		"@types/node": "10.9.2",
 		"@types/dot": "1.1.2",
 		"@types/js-yaml": "3.11.2",
+		"@types/readline-sync": "1.4.3",
 		"mocha": "5.2.0",
 		"chai": "4.1.2",
 		"chai-as-promised": "7.1.1",

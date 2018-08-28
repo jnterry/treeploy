@@ -5,17 +5,17 @@
 
 "use strict"
 
-const fs          = require('fs');
-const stdin       = require('readline-sync')
-const yaml        = require('js-yaml');
-const parseArgs   = require('minimist');
-const path        = require('path');
-const execSync    = require('child_process').execSync;
+import fs            from 'fs';
+import stdin         from 'readline-sync';
+import yaml          from 'js-yaml';
+import path          from 'path';
+import { execSync }  from 'child_process';
 
-const log         = require('./log.js').default;
-const treeploy    = require('./treeploy.js');
+import log                 from './log';
+import treeploy            from './treeploy';
+import { TreeployOptions } from './treeploy';
 
-async function treeploy_cli(arg_list){
+async function treeploy_cli(arg_list : Array <string>){
 
 	/////////////////////////////////////////////////////////
 	// Deal with inputs
@@ -39,7 +39,7 @@ async function treeploy_cli(arg_list){
 		return 1;
 	}
 
-	let options = {};
+	let options : TreeployOptions|null = null;
 	try {
 		// cut off the input and output path, then parse remaining arguments
 		options = parseOptionalArguments(arg_list.splice(2));
@@ -155,22 +155,14 @@ Options:
 `);
 }
 
-function parseOptionalArguments(arg_list){
-	/////////////////////////////////////////////////////////
-	// Set default options
-	let options = {
-		noroot     : false,
-		verbosity  : 0,
-		overwrite  : false,
-		dot_models : {},
-	};
-	/////////////////////////////////////////////////////////
+function parseOptionalArguments(arg_list : Array<string>) : TreeployOptions|null{
+	let options = new TreeployOptions();
 
 	/////////////////////////////////////////////////////////
 	// Parse inputs
 
 	// split any combined single char args like -ab into -a and -b
-	arg_list = arg_list.map((x) => {
+	arg_list = <Array<string>>arg_list.map((x) => {
 		if(x.match('^-[a-z][a-z]+$')){
 			return x.substring(1).split('').map((char) => '-' + char);
 		} else {
@@ -179,7 +171,7 @@ function parseOptionalArguments(arg_list){
 	});
 
 	// collapse any produced sub-arrays into flat list
-	arg_list = arg_list.reduce((a, c) => a.concat(c), []);
+	arg_list = arg_list.reduce((a, c) => a.concat(c), <Array<string>>[]);
 
 	for(let i = 0; i < arg_list.length; ++i){
 		switch(arg_list[i]){
@@ -249,10 +241,13 @@ function parseOptionalArguments(arg_list){
  * @param {object} options - Current state of parsed options, this will be
  * modified to reflect new options with additional model field
  */
-function processFlagModelFile(model_path, file_name, options){
+function processFlagModelFile(model_path : string,
+															file_name  : string,
+															options    : TreeployOptions){
 	let extension = file_name.split('.').pop();
 
-	if(['yaml', 'yml', 'json'].indexOf(extension) < 0){
+	if(extension === undefined ||
+		 ['yaml', 'yml', 'json'].indexOf(<string>extension) < 0){
 		throw new Error(
 			"Model file must have one of following extensions: .json. .yaml, .yml"
 		);
@@ -264,7 +259,7 @@ function processFlagModelFile(model_path, file_name, options){
 		);
 	}
 
-	let content = fs.readFileSync(file_name);
+	let content = fs.readFileSync(file_name).toString();
 
 	let loaded_data = null;
 	try {
@@ -289,7 +284,9 @@ function processFlagModelFile(model_path, file_name, options){
  * @param {object} options - Current state of parsed options, this will be
  * modified to reflect new options with additional model field
  */
-function processFlagModel(field_name, field_value, options){
+function processFlagModel(field_name  : string,
+													field_value : any,
+													options     : TreeployOptions){
 	if(field_value.match(/^[0-9]+$/)){
 		field_value = parseInt(field_value);
 	} else if(field_value.match(/^(\+|-)?[0-9]*\.[0-9]+$/)){
@@ -311,7 +308,9 @@ function processFlagModel(field_name, field_value, options){
 	setModelField(field_name, field_value, options);
 }
 
-function processFlagModelCmd(field, cmd, options){
+function processFlagModelCmd(field   : string,
+														 cmd     : string,
+														 options : TreeployOptions){
 	let cmd_result = execSync(cmd);
 	let cmd_stdout = cmd_result.toString('utf8');
 	try {
@@ -337,14 +336,16 @@ function processFlagModelCmd(field, cmd, options){
  * @param {object} options - Current state of parsed options, this will be
  * modified to reflect new options with additional model field
  */
-function setModelField(field_name, field_value, options){
+function setModelField(field_name  : string,
+											 field_value : any,
+											 options     : TreeployOptions){
 	if(field_name === ''){
 		options.dot_models = Object.assign(options.dot_models, field_value);
 		return;
 	}
 
 	let field_parts = field_name.split('.');
-	let object_node = options.dot_models;
+	let object_node = <any>options.dot_models;
 	for(let i = 0; i < field_parts.length - 1; ++i){
 		if(object_node[field_parts[i]] == null){
 			object_node[field_parts[i]] = {};
@@ -364,4 +365,4 @@ function setModelField(field_name, field_value, options){
 	}
 }
 
-module.exports = treeploy_cli;
+export default treeploy_cli;

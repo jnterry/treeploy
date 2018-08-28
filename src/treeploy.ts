@@ -33,10 +33,11 @@ const file_name_regex = {
 	template        : /^.+\.dot$/,
 };
 
-class TreeployOptions {
+export class TreeployOptions {
 	verbosity  : number  = 0;
 	dot_models : object  = { it : {}};
 	overwrite  : boolean = false;
+	noroot     : boolean = false;
 };
 
 class TreeployContext {
@@ -367,4 +368,4 @@ async function copyFile(cntx        : TreeployContext,
 	return copyFileAttributes(cntx, source_path, target_path);
 }
 
-module.exports = treeploy;
+export default treeploy;
