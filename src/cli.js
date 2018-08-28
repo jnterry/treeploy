@@ -13,7 +13,7 @@ const path        = require('path');
 const Q           = require('q');
 const execSync    = require('child_process').execSync;
 
-const treeploy    = require('./index.js');
+const treeploy    = require('./treeploy.js');
 
 function treeploy_cli(arg_list){
 

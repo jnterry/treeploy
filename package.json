@@ -3,7 +3,7 @@
 	"version": "0.4.0",
 	"description": "Directory tree deployment script",
 	"homepage": "https://github.com/jnterry/treeploy",
-	"main": "src/index.js",
+	"main": "src/treeploy.js",
 	"repository": {
 		"type": "git",
 		"url": "git://github.com/jnterry/treeploy.git"

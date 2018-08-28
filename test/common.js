@@ -5,7 +5,7 @@
 global.mockfs       = require('mock-fs');
 
 global.file_utils   = require('../src/file_utils.js');
-global.treeploy     = require('../src/index.js');
+global.treeploy     = require('../src/treeploy.js');
 global.treeploy_cli = require('../src/cli.js');
 
 const chai = require('chai');
