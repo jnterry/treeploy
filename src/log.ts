@@ -4,8 +4,6 @@
 
 import cli from 'colors/safe';
 
-console.dir(cli);
-
 interface LoggerWriteFunc {
 	(str : string): void,
 }
@@ -57,4 +55,4 @@ function setLevel(level : number) : void {
 	}
 }
 
-export { global_instance as log };
+export default global_instance;

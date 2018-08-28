@@ -59,6 +59,5 @@
 
 	"include": [
 		"src/**/*",
-		"node_modules/@types/**/*.d.ts",
 	]
 }

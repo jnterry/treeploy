@@ -8,7 +8,7 @@ const path       = require('path');
 
 const FileDriverLocal = require('./file_drivers/local.js');
 
-const log = require('./log.js').log;
+const log = require('./log.js').default;
 
 dot_engine.templateSettings = {
   evaluate      : /\{\{([\s\S]+?)\}\}/g,

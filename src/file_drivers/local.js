@@ -6,7 +6,7 @@ const fs            = require('fs');
 const { promisify } = require('util');
 const path          = require('path');
 
-const log = require('./../log.js').log;
+const log = require('./../log.js').default;
 
 const file_utils    = require('../file_utils.js')
 
