@@ -3,9 +3,23 @@
  */
 
 const fse        = require('fs-extra');
+const fs         = require('fs');
 const yaml       = require('node-yaml');
 const dot_engine = require('dot');
 const path       = require('path');
+
+// Temporary work around for:
+// https://github.com/tschaub/mock-fs/issues/245
+fse.readFile = function(path){
+	return new Promise((resolve, reject) => {
+		try {
+			let content = fse.readFileSync(path);
+			resolve(content)
+		} catch (e) {
+			reject(e);
+		}
+	});
+}
 
 const makeLogger = require('./log.js')
 const file_utils = require('./file_utils.js');
@@ -78,7 +92,6 @@ async function treeploy(source_path, target_path, options){
 }
 
 async function treeployDirectory(source_path, target_path, options){
-
 	log.trace('Processing source directory: ' + source_path);
 
 	if(!source_path.endsWith('/')){ source_path += '/'; }
@@ -154,11 +167,9 @@ async function treeployFile(source_path, target_path, options){
 
 	// otherwise this is just a standard file...
 	log.debug("Copying file " + source_path + " to " + target_path);
-	return fse
-		.copy(source_path, target_path)
-		.then(() => {
-			return file_utils.syncFileMetaData(source_path, target_path);
-		});
+
+	await fse.copy(source_path, target_path);
+	return file_utils.syncFileMetaData(source_path, target_path);
 }
 
 /**
@@ -199,14 +210,14 @@ async function processDotFile(input_path, output_path, dot_vars){
 		output_path = output_path.substring(0, output_path.length-4);
 	}
 
-	let template_content = fse.readFileSync(input_path);
+	let template_content = await fse.readFile(input_path);
 
 	let output_content = processDotTemplate(
 		input_path, template_content, dot_vars
 	);
 
-	fse.writeFileSync(output_path, output_content);
-	file_utils.syncFileMetaData(input_path, output_path);
+	await fse.writeFile(output_path, output_content);
+	await file_utils.syncFileMetaData(input_path, output_path);
 }
 
 
@@ -225,7 +236,7 @@ async function processTreeYaml(input_file, output_root_dir, dot_vars){
 
 	await fse.ensureDir(output_root_dir);
 
-	let content = fse.readFileSync(input_file).toString('utf8');
+	let content = (await fse.readFile(input_file));
 
 	if(input_file.endsWith('.dot')){
 		content = processDotTemplate(input_file, content, dot_vars);
@@ -233,9 +244,9 @@ async function processTreeYaml(input_file, output_root_dir, dot_vars){
 
 	let tree = yaml.parse(content);
 
-	buildTreeFromDescription(tree, output_root_dir);
+	return buildTreeFromDescription(tree, output_root_dir);
 
-	function buildTreeFromDescription(tree, output_root_dir){
+	async function buildTreeFromDescription(tree, output_root_dir){
 		if(!output_root_dir.endsWith('/')){
 			output_root_dir += '/';
 		}
@@ -281,34 +292,34 @@ async function processTreeYaml(input_file, output_root_dir, dot_vars){
 			let full_path = output_root_dir + name;
 
 			let stats = null;
-			if(fse.existsSync(full_path)){
-				stats = fse.statSync(full_path);
+			if(await fse.exists(full_path)){
+				stats = await fse.stat(full_path);
 			}
 
 			if(name.endsWith('/')){
 				if(stats != null && !stats.isDirectory()){
 					log.warn("Overwritting existing non-directory with directory: " + full_path);
-					fse.unlinkSync(full_path);
+					await fse.unlink(full_path);
 				}
-				fse.ensureDirSync(full_path);
+				await fse.ensureDir(full_path);
 			} else {
 				if(stats == null){
-					fse.writeFileSync(full_path, '');
+					await fse.writeFile(full_path, '');
 				} else {
 					if(!stats.isFile()){
 						log.warn("Overwritting existing non-file with file: " + full_path);
-						fse.unlinkSync(full_path);
-						fse.wrteFileSync(full_path, '');
+						await fse.unlink(full_path);
+						await fse.wrteFile(full_path, '');
 					} else {
 						log.debug("Not overwriting existing file: " + full_path);
 					}
 				}
 			}
 
-			file_utils.applyFilePermissions(full_path, opts);
+			await file_utils.applyFilePermissions(full_path, opts);
 
 			if(opts.children != null){
-				buildTreeFromDescription(opts.children, full_path);
+				await buildTreeFromDescription(opts.children, full_path);
 			}
 		}
 	}
