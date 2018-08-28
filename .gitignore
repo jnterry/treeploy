@@ -6,11 +6,9 @@
 # Ignore node modules (do an npm install)
 node_modules
 
-# Ignore test output
+# Ignore generated documentation, coverage, js files, executables, etc
 coverage
-
-# Ignore generated documentation
 docs
-
-# Ignore standalone executables
 dist
+exe
+.nyc_output
