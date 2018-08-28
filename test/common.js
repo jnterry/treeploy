@@ -65,6 +65,11 @@ global.expectFile = function(name_arg, opts){
 	let stats = fs.statSync(name);
 	expect(stats.isFile()).is.true;
 	checkStats(stats, opts);
+
+	if(opts != null && opts.content != null){
+		let content = fs.readFileSync(name).toString();
+		expect(content).is.deep.equal(opts.content);
+	}
 }
 
 global.expectNone = function(name_arg){
