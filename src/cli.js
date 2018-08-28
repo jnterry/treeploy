@@ -7,7 +7,7 @@
 
 const fs          = require('fs');
 const stdin       = require('readline-sync')
-const yaml        = require('node-yaml');
+const yaml        = require('js-yaml');
 const parseArgs   = require('minimist');
 const path        = require('path');
 const execSync    = require('child_process').execSync;
@@ -269,8 +269,8 @@ function processFlagModelFile(model_path, file_name, options){
 	let loaded_data = null;
 	try {
 		switch(extension){
-			case 'yaml' : loaded_data = yaml.parse(content); break;
-			case 'yml'  : loaded_data = yaml.parse(content); break;
+			case 'yaml' : loaded_data = yaml.safeLoad(content); break;
+			case 'yml'  : loaded_data = yaml.safeLoad(content); break;
 			case 'json' : loaded_data = JSON.parse(content); break;
 		}
 	} catch (e) {
