@@ -2,27 +2,13 @@
  * Main file exporting the treeploy function
  */
 
-const fse        = require('fs-extra');
-const fs         = require('fs');
 const yaml       = require('node-yaml');
 const dot_engine = require('dot');
 const path       = require('path');
 
-// Temporary work around for:
-// https://github.com/tschaub/mock-fs/issues/245
-fse.readFile = function(path){
-	return new Promise((resolve, reject) => {
-		try {
-			let content = fse.readFileSync(path);
-			resolve(content)
-		} catch (e) {
-			reject(e);
-		}
-	});
-}
+const FileDriverLocal = require('./file_drivers/local.js');
 
 const makeLogger = require('./log.js')
-const file_utils = require('./file_utils.js');
 
 dot_engine.templateSettings = {
   evaluate      : /\{\{([\s\S]+?)\}\}/g,
@@ -76,33 +62,38 @@ async function treeploy(source_path, target_path, options){
 
 	global.log = makeLogger(options.verbosity);
 
-	if(!(await fse.exists(source_path))){
+	let fdriver = {
+		source : new FileDriverLocal(true ),
+		target : new FileDriverLocal(false),
+	};
+
+	if(!(await fdriver.source.exists(source_path))){
 		throw new Error("Source path '" + source_path + "' does not exist!");
 	}
 
-	let input_stat = await fse.stat(source_path);
+	let input_stat = await fdriver.source.stat(source_path);
 
 	if(input_stat.isDirectory()){
-		return treeployDirectory(source_path, target_path, options);
+		return treeployDirectory(fdriver, source_path, target_path, options);
 	} else if (input_stat.isFile()){
-		return treeployFile(source_path, target_path, options);
+		return treeployFile(fdriver, source_path, target_path, options);
 	} else {
 		throw new Error("Source path is neither a directory nor a file");
 	}
 }
 
-async function treeployDirectory(source_path, target_path, options){
+async function treeployDirectory(fdriver, source_path, target_path, options){
 	log.trace('Processing source directory: ' + source_path);
 
 	if(!source_path.endsWith('/')){ source_path += '/'; }
 	if(!target_path.endsWith('/')){ target_path += '/'; }
 
-	if(await fse.exists(target_path)){
-		let stat = await fse.stat(target_path);
+	if(await fdriver.target.exists(target_path)){
+		let stat = await fdriver.target.stat(target_path);
 		if(!stat.isDirectory()){
 			if(options.overwrite){
 				log.info("Removing conflicting non-directory in place of: " + target_path);
-				await fse.remove(target_path);
+				await fdriver.target.remove(target_path);
 			} else {
 				throw new Error(
 					"Path '" + target_path +
@@ -112,25 +103,25 @@ async function treeployDirectory(source_path, target_path, options){
 		}
 	}
 
-	await fse.ensureDir(target_path);
-	await file_utils.syncFileMetaData(source_path, target_path);
+	await fdriver.target.mkdir(target_path);
+	await fdriverCopyAttributes(fdriver, source_path, target_path);
 
-	let entries = await fse.readdir(source_path);
+	let entries = await fdriver.source.readdir(source_path);
 
 	// we need delay tree yaml files to the end since they may manipulate the
 	// permisions of normal files
 	let tree_files = [];
 
 	for(let entry of entries) {
-		let stat = await fse.stat(source_path + entry);
+		let stat = await fdriver.source.stat(source_path + entry);
 
 		if(stat.isDirectory()){
-			await treeployDirectory(source_path + entry, target_path + entry, options);
+			await treeployDirectory(fdriver, source_path + entry, target_path + entry, options);
 		} else if(stat.isFile()){
 			if(entry.match(file_name_regex.tree_descriptor)){
 				tree_files.push(entry);
 			} else {
-				await treeployFile(source_path + entry, target_path + entry, options);
+				await treeployFile(fdriver, source_path + entry, target_path + entry, options);
 			}
 
 		} else {
@@ -139,13 +130,13 @@ async function treeployDirectory(source_path, target_path, options){
 	}
 
 	for(let x of tree_files){
-		await treeployFile(source_path + x, target_path + x, options);
+		await treeployFile(fdriver, source_path + x, target_path + x, options);
 	}
 
 	return true;
 }
 
-async function treeployFile(source_path, target_path, options){
+async function treeployFile(fdriver, source_path, target_path, options){
 
 	let file_name = path.basename(source_path);
 
@@ -158,17 +149,17 @@ async function treeployFile(source_path, target_path, options){
 	}
 
 	if (file_name.match(file_name_regex.tree_descriptor)){
-		return processTreeYaml(source_path, target_path, dot_models);
+		return processTreeYaml(fdriver, source_path, target_path, dot_models);
 	}
 
 	if(file_name.match(file_name_regex.template)){
-		return processDotFile(source_path, target_path, dot_models)
+		return processDotFile(fdriver, source_path, target_path, dot_models)
 	}
 
 	// otherwise this is just a standard file...
 	log.debug("Copying file " + source_path + " to " + target_path);
 
-	await fse.copy(source_path, target_path);
+	await fdriverCopy(fdriver, source_path, target_path);
 	return file_utils.syncFileMetaData(source_path, target_path);
 }
 
@@ -203,21 +194,21 @@ function processDotTemplate(template_name, template, dot_vars){
  * @param {string}  output_path - Path to write the result to
  * @param {object}  dot_vars    - Variables to be passed as model to template
  */
-async function processDotFile(input_path, output_path, dot_vars){
-	log.trace("Processing dot template: " + input_path);
+async function processDotFile(fdriver, source_path, target_path, dot_vars){
+	log.trace("Processing dot template: " + source_path);
 
-	if(output_path.endsWith('.dot')){
-		output_path = output_path.substring(0, output_path.length-4);
+	if(target_path.endsWith('.dot')){
+		target_path = target_path.substring(0, target_path.length-4);
 	}
 
-	let template_content = await fse.readFile(input_path);
+	let template_content = await fdriver.source.readFile(source_path);
 
 	let output_content = processDotTemplate(
-		input_path, template_content, dot_vars
+		source_path, template_content, dot_vars
 	);
 
-	await fse.writeFile(output_path, output_content);
-	await file_utils.syncFileMetaData(input_path, output_path);
+	await fdriver.target.writeFile(target_path, output_content);
+	return fdriverCopyAttributes(fdriver, source_path, target_path);
 }
 
 
@@ -225,7 +216,7 @@ async function processDotFile(input_path, output_path, dot_vars){
  * Processes a tree.yaml file in order to create a set of empty
  * files and directories in the root directory
  */
-async function processTreeYaml(input_file, output_root_dir, dot_vars){
+async function processTreeYaml(fdriver, input_file, output_root_dir, dot_vars){
 	log.trace("Processing tree yaml: " + input_file);
 
 	if(output_root_dir.endsWith(path.basename(input_file))){
@@ -234,9 +225,9 @@ async function processTreeYaml(input_file, output_root_dir, dot_vars){
 		output_root_dir = path.dirname(output_root_dir) + "/";
 	}
 
-	await fse.ensureDir(output_root_dir);
+	await fdriver.target.mkdir(output_root_dir);
 
-	let content = (await fse.readFile(input_file));
+	let content = (await fdriver.source.readFile(input_file));
 
 	if(input_file.endsWith('.dot')){
 		content = processDotTemplate(input_file, content, dot_vars);
@@ -289,40 +280,56 @@ async function processTreeYaml(input_file, output_root_dir, dot_vars){
 				name += '/';
 			}
 
-			let full_path = output_root_dir + name;
+			let target_full_path = output_root_dir + name;
 
 			let stats = null;
-			if(await fse.exists(full_path)){
-				stats = await fse.stat(full_path);
+			if(await fdriver.target.exists(target_full_path)){
+				stats = await fdriver.target.stat(target_full_path);
 			}
 
 			if(name.endsWith('/')){
 				if(stats != null && !stats.isDirectory()){
-					log.warn("Overwritting existing non-directory with directory: " + full_path);
-					await fse.unlink(full_path);
+					log.warn("Overwritting existing non-directory with directory: " + target_full_path);
+					await fdriver.target.remove(target_full_path);
 				}
-				await fse.ensureDir(full_path);
+				await fdriver.target.mkdir(target_full_path);
 			} else {
 				if(stats == null){
-					await fse.writeFile(full_path, '');
+					await fdriver.target.writeFile(target_full_path, '');
 				} else {
 					if(!stats.isFile()){
-						log.warn("Overwritting existing non-file with file: " + full_path);
-						await fse.unlink(full_path);
-						await fse.wrteFile(full_path, '');
+						log.warn("Overwritting existing non-file with file: " + target_full_path);
+						await fdriver.target.remove(target_full_path);
+						await fdriver.target.writeFile(target_full_path, '');
 					} else {
-						log.debug("Not overwriting existing file: " + full_path);
+						log.debug("Not overwriting existing file: " + target_full_path);
 					}
 				}
 			}
 
-			await file_utils.applyFilePermissions(full_path, opts);
+			await fdriver.target.setAttributes(target_full_path, opts);
 
 			if(opts.children != null){
-				await buildTreeFromDescription(opts.children, full_path);
+				await buildTreeFromDescription(opts.children, target_full_path);
 			}
 		}
 	}
+}
+
+
+async function fdriverCopyAttributes(fdriver, source_path, target_path){
+	let attr = await fdriver.source.getAttributes(source_path);
+	return fdriver.target.setAttributes(target_path, attr);
+}
+
+/**
+ * Helper function which copies a file between a source and
+ * target FileDriver pair
+ */
+async function fdriverCopy(fdriver, source_path, target_path){
+	let content = await fdriver.source.readFile(source_path);
+	await fdriver.target.writeFile(target_path, content);
+	return fdriverCopyAttributes(fdriver, source_path, target_path);
 }
 
 module.exports = treeploy;
