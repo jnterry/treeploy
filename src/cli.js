@@ -12,6 +12,7 @@ const parseArgs   = require('minimist');
 const path        = require('path');
 const execSync    = require('child_process').execSync;
 
+const log         = require('./log.js').log;
 const treeploy    = require('./treeploy.js');
 
 async function treeploy_cli(arg_list){

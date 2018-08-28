@@ -8,7 +8,7 @@ const path       = require('path');
 
 const FileDriverLocal = require('./file_drivers/local.js');
 
-const makeLogger = require('./log.js');
+const log = require('./log.js').log;
 
 dot_engine.templateSettings = {
   evaluate      : /\{\{([\s\S]+?)\}\}/g,
@@ -60,7 +60,7 @@ async function treeploy(source_path, target_path, options){
 		dot_engine.templateSettings.varname = models.join(',');
 	}
 
-	global.log = makeLogger(options.verbosity);
+	log.setLevel(options.verbosity);
 
 	let fdriver = {
 		source : new FileDriverLocal(true ),
