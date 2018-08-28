@@ -10,7 +10,9 @@
 	},
 	"scripts": {
 		"build": "./node_modules/.bin/tsc",
-		"test": "sudo -E env \"PATH=$PATH\" ./node_modules/.bin/nyc ./node_modules/.bin/mocha && ./node_modules/.bin/nyc report --reporter lcov"
+		"test": "sudo -E env \"PATH=$PATH\" ./node_modules/.bin/nyc ./node_modules/.bin/mocha && ./node_modules/.bin/nyc report --reporter lcov --reporter html",
+		"clean": "sudo rm -rf dist coverage exe",
+		"cbr": "npm run clean && npm run build && npm test"
 	},
 	"author": "Jamie Terry",
 	"license": "MIT",

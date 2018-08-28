@@ -4,15 +4,11 @@
     "target": "es6",
     "module": "commonjs",
 
-    "allowJs": true,                       /* Allow javascript files to be compiled. */
-		// "checkJs": true,                       /* Report errors in .js files. */
+    "declaration": true,                   /* Generates corresponding '.d.ts' file. */
 
-    // "declaration": true,                   /* Generates corresponding '.d.ts' file. */
-    // "declarationMap": true,                /* Generates a sourcemap for each corresponding '.d.ts' file. */
-
-    "sourceMap": true,                     /* Generates corresponding '.map' file. */
-		"rootDir": "./src",
-    "outDir": "./dist",                        /* Redirect output structure to the directory. */
+		"inlineSourceMap": true,
+		"rootDir": "src",
+    "outDir": "dist",                        /* Redirect output structure to the directory. */
     "removeComments": false,                /* Do not emit comments to output. */
 
     /* Strict Type-Checking Options */
@@ -31,12 +27,10 @@
     /* Module Resolution Options */
     "moduleResolution": "node",
     "esModuleInterop": true,
-
-    /* Source Map Options */
-    "sourceRoot": ".",
   },
 
+	"exclude": [],
 	"include": [
-		"src/**/*",
+		"src/**/*.ts",
 	]
 }
