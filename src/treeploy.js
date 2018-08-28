@@ -6,7 +6,6 @@ const fs         = require('fs');
 const fse        = require('fs-extra');
 const yaml       = require('node-yaml');
 const dot_engine = require('dot');
-const Q          = require('q');
 const path       = require('path');
 
 const makeLogger = require('./log.js')
@@ -64,7 +63,7 @@ function treeploy(source_path, target_path, options){
 
 	global.log = makeLogger(options.verbosity);
 
-	return Q(fse
+	return fse
 		.pathExists(source_path)
 		.catch((err) => {
 			throw new Error("Source path '" + source_path + "' does not exist!");
@@ -78,8 +77,7 @@ function treeploy(source_path, target_path, options){
 			} else {
 				throw new Error("Source path is neither a directory nor a file");
 			}
-		})
-	);
+		});
 }
 
 function treeployDirectory(source_path, target_path, options){
@@ -113,15 +111,13 @@ function treeployDirectory(source_path, target_path, options){
 		.then(() => fse.ensureDir(target_path))
 		.then(() => file_utils.syncFileMetaData(source_path, target_path))
 		.then(() => fse.readdir(source_path))
-		.then((entries) => {
+		.then(async (entries) => {
 			// we need delay tree yaml files to the end since they may manipulate the
 			// permisions of normal files
 			let tree_files = [];
 
-			let promises  = [];
-
 			for(let entry of entries) {
-				promises.push(fse
+				await fse
 					.stat(source_path + entry)
 					.then((stat) => {
 						if(stat.isDirectory()){
@@ -137,19 +133,18 @@ function treeployDirectory(source_path, target_path, options){
 						} else {
 							log.warn("Skipping: " + source_path + " - neither a directory nor a file");
 						}
-					})
-				);
+					});
 			}
 
-			return Q
-				.all(promises)
-				.then(() => Q.all(
-					tree_files.map((x) => treeployFile(source_path + x, target_path + x, options))
-				));
+			for(let x of tree_files){
+				await treeployFile(source_path + x, target_path + x, options);
+			}
+
+			return true;
 		});
 }
 
-function treeployFile(source_path, target_path, options){
+async function treeployFile(source_path, target_path, options){
 
 	let file_name = path.basename(source_path);
 
@@ -158,23 +153,19 @@ function treeployFile(source_path, target_path, options){
 
 	if(file_name.match(file_name_regex.skipped)){
 		log.info("Skipping file which matches skip regex: " + source_path);
-		return Q(false);
+		return false;
 	}
 
 	if (file_name.match(file_name_regex.tree_descriptor)){
 		// :TODO: make processTreeYaml return a promise :ISSUE6:
-		return Q().then(() => {
-			log.trace("Processing tree yaml: " + source_path);
-			processTreeYaml(source_path, target_path, dot_models);
-		});
+		log.trace("Processing tree yaml: " + source_path);
+		return processTreeYaml(source_path, target_path, dot_models);
 	}
 
 	if(file_name.match(file_name_regex.template)){
-		return Q().then(() => {
-			// :TODO: make processDotFile return a promise :ISSUE6:
-			log.trace("Processing dot template: " + source_path);
-			processDotFile(source_path, target_path, dot_models)
-		});
+		// :TODO: make processDotFile return a promise :ISSUE6:
+		log.trace("Processing dot template: " + source_path);
+		return processDotFile(source_path, target_path, dot_models)
 	}
 
 	// otherwise this is just a standard file...

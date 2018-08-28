@@ -10,24 +10,23 @@ const stdin       = require('readline-sync')
 const yaml        = require('node-yaml');
 const parseArgs   = require('minimist');
 const path        = require('path');
-const Q           = require('q');
 const execSync    = require('child_process').execSync;
 
 const treeploy    = require('./treeploy.js');
 
-function treeploy_cli(arg_list){
+async function treeploy_cli(arg_list){
 
 	/////////////////////////////////////////////////////////
 	// Deal with inputs
 	if(arg_list.indexOf('-h') >= 0 || arg_list.indexOf('--help') >= 0){
 		displayHelp();
-		return Q(0);
+		return 0;
 	}
 
 	if(arg_list.length < 2){
 		log.error("Too few arguments\n");
 		printUsage();
-		return Q(1);
+		return 1;
 	}
 
 	let input_path  = arg_list[0];
@@ -36,18 +35,18 @@ function treeploy_cli(arg_list){
 	if(input_path.startsWith('-') || output_path.startsWith('-')){
 		log.error("Input and output paths must be first two arguments - place flags afterwards\n");
 		printUsage();
-		return Q(1);
+		return 1;
 	}
 
 	let options = {};
 	try {
 		// cut off the input and output path, then parse remaining arguments
 		options = parseOptionalArguments(arg_list.splice(2));
-		if(options == null){ return Q(0); }
+		if(options == null){ return 0; }
 	} catch (e) {
 		log.error(e.message);
 		printUsage();
-		return Q(1);
+		return 1;
 	}
 	/////////////////////////////////////////////////////////
 
@@ -59,7 +58,7 @@ function treeploy_cli(arg_list){
 		console.log('Not running as root, may not be able set file permissions, owners, etc');
 		let response = stdin.question('Continue? [y/N]');
 		if(!response.match('[Yy]|[Yy][Ee][Ss]')){
-			return Q(0);
+			return 0;
 		}
 	}
 	/////////////////////////////////////////////////////////
@@ -76,7 +75,7 @@ function treeploy_cli(arg_list){
 
 		let response = stdin.question("Continue? [y/N] ");
 		if(!response.match('[Yy]|[Yy][Ee][Ss]')){
-			return Q(0);
+			return 0;
 		}
 		options.overwrite = true;
 	}
@@ -90,7 +89,7 @@ function treeploy_cli(arg_list){
 		.then(() => 0)
 		.catch((e) => {
 			log.error(e.message);
-			return Q(1)
+			return 1;
 		});
 	/////////////////////////////////////////////////////////
 }
