@@ -4,9 +4,9 @@
 
 global.mockfs       = require('mock-fs');
 
-global.file_utils   = require('../src/file_utils.js');
-global.treeploy     = require('../src/treeploy.js');
-global.treeploy_cli = require('../src/cli.js');
+global.file_utils   = require('../dist/file_utils.js');
+global.treeploy     = require('../dist/treeploy.js').default;
+global.treeploy_cli = require('../dist/cli.js').default;
 
 const chai = require('chai');
 chai.use(require('chai-as-promised'));

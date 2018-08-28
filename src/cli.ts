@@ -5,29 +5,36 @@
 
 "use strict"
 
-const fs          = require('fs');
-const stdin       = require('readline-sync')
-const yaml        = require('node-yaml');
-const parseArgs   = require('minimist');
-const path        = require('path');
-const Q           = require('q');
-const execSync    = require('child_process').execSync;
+import fs            from 'fs';
+import stdin         from 'readline-sync';
+import yaml          from 'js-yaml';
+import path          from 'path';
+import { execSync }  from 'child_process';
 
-const treeploy    = require('./treeploy.js');
+import log                 from './log';
+import treeploy            from './treeploy';
+import { TreeployOptions } from './treeploy';
 
-function treeploy_cli(arg_list){
+/**
+ * Function implementing the command line interface to treeploy
+ * @param arg_list - List of command line arguments passed to treeploy
+ *
+ * @return Promise which resolves to the exit code that the CLI
+ * executable should exit with
+ */
+async function treeploy_cli(arg_list : Array <string>){
 
 	/////////////////////////////////////////////////////////
 	// Deal with inputs
 	if(arg_list.indexOf('-h') >= 0 || arg_list.indexOf('--help') >= 0){
 		displayHelp();
-		return Q(0);
+		return 0;
 	}
 
 	if(arg_list.length < 2){
 		log.error("Too few arguments\n");
 		printUsage();
-		return Q(1);
+		return 1;
 	}
 
 	let input_path  = arg_list[0];
@@ -36,18 +43,18 @@ function treeploy_cli(arg_list){
 	if(input_path.startsWith('-') || output_path.startsWith('-')){
 		log.error("Input and output paths must be first two arguments - place flags afterwards\n");
 		printUsage();
-		return Q(1);
+		return 1;
 	}
 
-	let options = {};
+	let options : TreeployOptions|null = null;
 	try {
 		// cut off the input and output path, then parse remaining arguments
 		options = parseOptionalArguments(arg_list.splice(2));
-		if(options == null){ return Q(0); }
+		if(options == null){ return 0; }
 	} catch (e) {
 		log.error(e.message);
 		printUsage();
-		return Q(1);
+		return 1;
 	}
 	/////////////////////////////////////////////////////////
 
@@ -59,7 +66,7 @@ function treeploy_cli(arg_list){
 		console.log('Not running as root, may not be able set file permissions, owners, etc');
 		let response = stdin.question('Continue? [y/N]');
 		if(!response.match('[Yy]|[Yy][Ee][Ss]')){
-			return Q(0);
+			return 0;
 		}
 	}
 	/////////////////////////////////////////////////////////
@@ -76,7 +83,7 @@ function treeploy_cli(arg_list){
 
 		let response = stdin.question("Continue? [y/N] ");
 		if(!response.match('[Yy]|[Yy][Ee][Ss]')){
-			return Q(0);
+			return 0;
 		}
 		options.overwrite = true;
 	}
@@ -90,16 +97,18 @@ function treeploy_cli(arg_list){
 		.then(() => 0)
 		.catch((e) => {
 			log.error(e.message);
-			return Q(1)
+			return 1;
 		});
 	/////////////////////////////////////////////////////////
 }
 
+/** Prints usage prompt to console */
 function printUsage(){
 	console.log("Usage: treeploy INPUT_PATH OUTPUT_PATH [DOT_VARS_FILE]");
 	console.log("       Run 'treeploy --help' for more information");
 }
 
+/** Prints full help infomation to console */
 function displayHelp(){
 	console.log(`
 Usage:
@@ -155,22 +164,25 @@ Options:
 `);
 }
 
-function parseOptionalArguments(arg_list){
-	/////////////////////////////////////////////////////////
-	// Set default options
-	let options = {
-		noroot     : false,
-		verbosity  : 0,
-		overwrite  : false,
-		dot_models : {},
-	};
-	/////////////////////////////////////////////////////////
+/**
+ * Parses extra optional flags arguments appearing after the source and
+ * destination path in order to construct a TreeployOptions object
+ *
+ * @param arg_list - List of arguments EXCLUDING the first two which represent
+ * the source and destination paths
+ *
+ * @return TreeployOptions object representing parsed options, or null if the
+ * program should terminate without processing the source and destination
+ * paths
+ */
+function parseOptionalArguments(arg_list : Array<string>) : TreeployOptions|null{
+	let options = new TreeployOptions();
 
 	/////////////////////////////////////////////////////////
 	// Parse inputs
 
 	// split any combined single char args like -ab into -a and -b
-	arg_list = arg_list.map((x) => {
+	arg_list = <Array<string>>arg_list.map((x) => {
 		if(x.match('^-[a-z][a-z]+$')){
 			return x.substring(1).split('').map((char) => '-' + char);
 		} else {
@@ -179,7 +191,7 @@ function parseOptionalArguments(arg_list){
 	});
 
 	// collapse any produced sub-arrays into flat list
-	arg_list = arg_list.reduce((a, c) => a.concat(c), []);
+	arg_list = arg_list.reduce((a, c) => a.concat(c), <Array<string>>[]);
 
 	for(let i = 0; i < arg_list.length; ++i){
 		switch(arg_list[i]){
@@ -239,20 +251,22 @@ function parseOptionalArguments(arg_list){
 }
 
 /**
- * Loads a doT.js model file
+ * Loads a doT.js model file (yaml or json)
  *
- * @param {string} value - The argument to the --modelfile CLI flag, should be
- * of the form 'model.field=./filename.json' or './filename.json', in later case
- * entire options.dot_models variable will be set to file contents
- * File to load must have one of following extensions: .json, .yaml or .yml
- *
- * @param {object} options - Current state of parsed options, this will be
+ * @param model_path - Path to the field in the dot_model to modify, eg
+ * field.name
+ * @param file_name - Path of file to load
+ * @param options - Current state of parsed options, this will be
  * modified to reflect new options with additional model field
  */
-function processFlagModelFile(model_path, file_name, options){
+function processFlagModelFile(model_path : string,
+															file_name  : string,
+															options    : TreeployOptions
+														 ) : void {
 	let extension = file_name.split('.').pop();
 
-	if(['yaml', 'yml', 'json'].indexOf(extension) < 0){
+	if(extension === undefined ||
+		 ['yaml', 'yml', 'json'].indexOf(<string>extension) < 0){
 		throw new Error(
 			"Model file must have one of following extensions: .json. .yaml, .yml"
 		);
@@ -264,13 +278,13 @@ function processFlagModelFile(model_path, file_name, options){
 		);
 	}
 
-	let content = fs.readFileSync(file_name);
+	let content = fs.readFileSync(file_name).toString();
 
 	let loaded_data = null;
 	try {
 		switch(extension){
-			case 'yaml' : loaded_data = yaml.parse(content); break;
-			case 'yml'  : loaded_data = yaml.parse(content); break;
+			case 'yaml' : loaded_data = yaml.safeLoad(content); break;
+			case 'yml'  : loaded_data = yaml.safeLoad(content); break;
 			case 'json' : loaded_data = JSON.parse(content); break;
 		}
 	} catch (e) {
@@ -285,11 +299,13 @@ function processFlagModelFile(model_path, file_name, options){
  *
  * @param {string} field_name  - The name of the field to modify
  * @param {string} field_value - The new value for field
- *
  * @param {object} options - Current state of parsed options, this will be
  * modified to reflect new options with additional model field
  */
-function processFlagModel(field_name, field_value, options){
+function processFlagModel(field_name  : string,
+													field_value : any,
+													options     : TreeployOptions
+												 ) : void {
 	if(field_value.match(/^[0-9]+$/)){
 		field_value = parseInt(field_value);
 	} else if(field_value.match(/^(\+|-)?[0-9]*\.[0-9]+$/)){
@@ -311,7 +327,19 @@ function processFlagModel(field_name, field_value, options){
 	setModelField(field_name, field_value, options);
 }
 
-function processFlagModelCmd(field, cmd, options){
+/**
+ * Executes a command, parses its output as JSON and updates the dot_model
+ * accordingly
+ *
+ * @param field_name  - The name of the field to modify
+ * @param field_value - The command to run whose output will be parsed as JSON
+ * @param options - Current state of parsed options, this will be
+ * modified to reflect new options with additional model field
+ */
+function processFlagModelCmd(field   : string,
+														 cmd     : string,
+														 options : TreeployOptions
+														) : void {
 	let cmd_result = execSync(cmd);
 	let cmd_stdout = cmd_result.toString('utf8');
 	try {
@@ -329,22 +357,22 @@ function processFlagModelCmd(field, cmd, options){
  * if setting web.host.domain it will create the host object within
  * web, and then set the domain field of that
  *
- * @param {string} field_name - Name of field, may contain dots to indicate
+ * @param field_name - Name of field, may contain dots to indicate
  * fields within objects
- *
- * @param {any}    field_value - The value to set the field to
- *
- * @param {object} options - Current state of parsed options, this will be
+ * @param field_value - The value to set the field to
+ * @param  options - Current state of parsed options, this will be
  * modified to reflect new options with additional model field
  */
-function setModelField(field_name, field_value, options){
+function setModelField(field_name  : string,
+											 field_value : any,
+											 options     : TreeployOptions){
 	if(field_name === ''){
 		options.dot_models = Object.assign(options.dot_models, field_value);
 		return;
 	}
 
 	let field_parts = field_name.split('.');
-	let object_node = options.dot_models;
+	let object_node = <any>options.dot_models;
 	for(let i = 0; i < field_parts.length - 1; ++i){
 		if(object_node[field_parts[i]] == null){
 			object_node[field_parts[i]] = {};
@@ -364,4 +392,4 @@ function setModelField(field_name, field_value, options){
 	}
 }
 
-module.exports = treeploy_cli;
+export default treeploy_cli;
