@@ -7,21 +7,19 @@ node_js:
 install:
   - npm install
   - npm run build
-
-script:
-  - npm test
-
-# Send coverage data to Coveralls
-after_script: "cat coverage/lcov.info | node_modules/coveralls/bin/coveralls.js"
-
-
-before_deploy:
-  # Install packages required for building 32 bit version
+  # Install packages required for building 32 bit version with pkg
   - sudo dpkg --add-architecture i386
   - sudo apt-get update
   - sudo apt-get install -y libc6:i386 libstdc++6:i386
-  # Actually build the releases
+
+script:
+  - npm test
   - ./build_release.sh
+  - ./exe/treeploy-linux-x64 --help
+  - ./exe/treeploy-linux-x86 --help
+
+# Send coverage data to Coveralls
+after_script: "cat coverage/lcov.info | node_modules/coveralls/bin/coveralls.js"
 
 deploy:
   # Release updated package to npm
@@ -29,6 +27,7 @@ deploy:
     email: jamie-terry@outlook.com
     api_key:
       secure: sLPG8YPiXqTeo/8vB5GQ6z8YvPyck3r9g/5WUY4YKwbYFRd/xjF1vRaWoQlZIMDm0J0GF5x+Cu9qbFPI0Edw7PDfruPu1qt2VVymt78RDFqWCTZ3fS6+bMkS90tvXdWTt8dHs5LMfkQRvB95ac6BhoHCe7Xe8yIlihagpCIFCOwPoH45JY/TSa9NXXueqj/xBuf1feRcuaq5B2B02l70hehclyVVt9Ai4jb7kTvXAzEblumN+ctjmRXRJEJ/VmL/yHsZSA1fA3h477xKpJqgGEc7pCmQjgtIWklebPiRl9W2235kDk7zKL9kNVLB40nyK1x3GyhaElG7dxo2b2LZoD5m+MzIJLpnI6yP0tKtp4H0ShTUf8FggF4P0Bhq9PW2tB6aSoV3GwDQnuN4NpLCo7Csc/aleLLHPiXMMX2tjWVkex5Z9lbF8iQ1kas9YFjzV00P6amnrMwZqOOgQnm9IuaM3/PB3S698DYAItXp+rlMCmC8jlRgYKYTrzstpfxMmp9leMeD+1aajIMmKoiCWrSiho3kTSD94rtwmPtHH17jtVniNZWiApVqgTq3LDfewiSHmjoOguGY+dC/1Nv7/PmQRqEmAm/SIMG7X+z6Kre4UB3hLRN73F64uW7fs14SFaoCnW5LdDyDLQaeXBawd+wSvD8zODy6EG0wrHK1e0g=
+    skip_cleanup: true
     on:
       tags: true
       branches:

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-let treeploy_cli = require('../dist/cli.js');
+let treeploy_cli = require('../dist/cli.js').default;
 
 treeploy_cli(process.argv.slice(2))
 	.then((exit_code) => {
