@@ -134,7 +134,7 @@ Options:
 |                     | <field> should be of the form: 'field.name'            |
 |                     |                                                        |
 |                     | <value> will be parsed as a string, unless it can be   |
-|                     | parsed as a float or integer; this can be prevented    |
+|                     | parsed as a float, int or bool; this can be prevented  |
 |                     | using quotes, for example: model.number=\\'123\\'        |
 |                     |                                                        |
 |                     | Example: --model version.commit $(git rev-parse HEAD)  |
@@ -294,6 +294,10 @@ function processFlagModel(field_name, field_value, options){
 		field_value = parseInt(field_value);
 	} else if(field_value.match(/^(\+|-)?[0-9]*\.[0-9]+$/)){
 		field_value = parseFloat(field_value);
+	} else if(field_value === 'true'){
+		field_value = true;
+	} else if (field_value === 'false'){
+		field_value = false;
 	} else if((field_value.startsWith("'") && field_value.endsWith("'")) ||
 		 (field_value.startsWith('"') && field_value.endsWith('"'))
 	){

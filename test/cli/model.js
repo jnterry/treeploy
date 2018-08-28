@@ -78,6 +78,18 @@ runTestExpectSuccess(
 );
 
 
+runTestExpectSuccess(
+	'Single boolean - false',
+	['--model', 'data', 'false'],
+	false
+);
+runTestExpectSuccess(
+	'Single boolean - true',
+	['--model', 'data', 'true'],
+	true
+);
+
+
 
 runTestExpectSuccess(
 	'Single float',
