@@ -2,7 +2,6 @@
  * Main file exporting the treeploy function
  */
 
-const fs         = require('fs');
 const fse        = require('fs-extra');
 const yaml       = require('node-yaml');
 const dot_engine = require('dot');
@@ -42,7 +41,7 @@ const file_name_regex = {
  * @return Promise which resolves to true once all operations have completed,
  * else a promise which is rejected
  */
-function treeploy(source_path, target_path, options){
+async function treeploy(source_path, target_path, options){
 	if(options            == null) { options            = {}; }
 	if(options.verbosity  == null) { options.verbosity  =  0; }
 	if(options.dot_models == null) { options.dot_models = {}; }
@@ -63,85 +62,74 @@ function treeploy(source_path, target_path, options){
 
 	global.log = makeLogger(options.verbosity);
 
-	return fse
-		.pathExists(source_path)
-		.catch((err) => {
-			throw new Error("Source path '" + source_path + "' does not exist!");
-		})
-		.then(() => fse.stat(source_path))
-		.then((input_stat) => {
-			if(input_stat.isDirectory()){
-				return treeployDirectory(source_path, target_path, options);
-			} else if (input_stat.isFile()){
-				return treeployFile(source_path, target_path, options);
-			} else {
-				throw new Error("Source path is neither a directory nor a file");
-			}
-		});
+	if(!(await fse.exists(source_path))){
+		throw new Error("Source path '" + source_path + "' does not exist!");
+	}
+
+	let input_stat = await fse.stat(source_path);
+
+	if(input_stat.isDirectory()){
+		return treeployDirectory(source_path, target_path, options);
+	} else if (input_stat.isFile()){
+		return treeployFile(source_path, target_path, options);
+	} else {
+		throw new Error("Source path is neither a directory nor a file");
+	}
 }
 
-function treeployDirectory(source_path, target_path, options){
+async function treeployDirectory(source_path, target_path, options){
 
 	log.trace('Processing source directory: ' + source_path);
 
 	if(!source_path.endsWith('/')){ source_path += '/'; }
 	if(!target_path.endsWith('/')){ target_path += '/'; }
 
-	return fse
-		.exists(target_path)
-		.then((does_exist) => {
-			if(!does_exist){ return; }
+	if(await fse.exists(target_path)){
+		let stat = await fse.stat(target_path);
+		if(!stat.isDirectory()){
+			if(options.overwrite){
+				log.info("Removing conflicting non-directory in place of: " + target_path);
+				await fse.remove(target_path);
+			} else {
+				throw new Error(
+					"Path '" + target_path +
+					"' exists as non-directory and options.overwrite is not set"
+				);
+			}
+		}
+	}
 
-			return fse
-				.stat(target_path)
-				.then((stat) => {
-					if(!stat.isDirectory()){
-						if(options.overwrite){
-							log.info("Removing conflicting non-directory in place of: " + target_path);
-							return fse.remove(target_path);
-						} else {
-							throw new Error(
-								"Path '" + target_path +
-								"' exists as non-directory and options.overwrite is not set"
-							);
-						}
-					}
-				})
-		})
-		.then(() => fse.ensureDir(target_path))
-		.then(() => file_utils.syncFileMetaData(source_path, target_path))
-		.then(() => fse.readdir(source_path))
-		.then(async (entries) => {
-			// we need delay tree yaml files to the end since they may manipulate the
-			// permisions of normal files
-			let tree_files = [];
+	await fse.ensureDir(target_path);
+	await file_utils.syncFileMetaData(source_path, target_path);
 
-			for(let entry of entries) {
-				await fse
-					.stat(source_path + entry)
-					.then((stat) => {
-						if(stat.isDirectory()){
-							return treeployDirectory(source_path + entry, target_path + entry, options);
-						} else if(stat.isFile()){
+	let entries = await fse.readdir(source_path);
 
-							if(entry.match(file_name_regex.tree_descriptor)){
-								tree_files.push(entry);
-							} else {
-								return treeployFile(source_path + entry, target_path + entry, options);
-							}
+	// we need delay tree yaml files to the end since they may manipulate the
+	// permisions of normal files
+	let tree_files = [];
 
-						} else {
-							log.warn("Skipping: " + source_path + " - neither a directory nor a file");
-						}
-					});
+	for(let entry of entries) {
+		let stat = await fse.stat(source_path + entry);
+
+		if(stat.isDirectory()){
+			await treeployDirectory(source_path + entry, target_path + entry, options);
+		} else if(stat.isFile()){
+			if(entry.match(file_name_regex.tree_descriptor)){
+				tree_files.push(entry);
+			} else {
+				await treeployFile(source_path + entry, target_path + entry, options);
 			}
 
-			for(let x of tree_files){
-				await treeployFile(source_path + x, target_path + x, options);
-			}
+		} else {
+			log.warn("Skipping: " + source_path + " - neither a directory nor a file");
+		}
+	}
 
-			return true;
-		});
+	for(let x of tree_files){
+		await treeployFile(source_path + x, target_path + x, options);
+	}
+
+	return true;
 }
 
 async function treeployFile(source_path, target_path, options){
@@ -157,14 +145,10 @@ async function treeployFile(source_path, target_path, options){
 	}
 
 	if (file_name.match(file_name_regex.tree_descriptor)){
-		// :TODO: make processTreeYaml return a promise :ISSUE6:
-		log.trace("Processing tree yaml: " + source_path);
 		return processTreeYaml(source_path, target_path, dot_models);
 	}
 
 	if(file_name.match(file_name_regex.template)){
-		// :TODO: make processDotFile return a promise :ISSUE6:
-		log.trace("Processing dot template: " + source_path);
 		return processDotFile(source_path, target_path, dot_models)
 	}
 
@@ -208,18 +192,20 @@ function processDotTemplate(template_name, template, dot_vars){
  * @param {string}  output_path - Path to write the result to
  * @param {object}  dot_vars    - Variables to be passed as model to template
  */
-function processDotFile(input_path, output_path, dot_vars){
+async function processDotFile(input_path, output_path, dot_vars){
+	log.trace("Processing dot template: " + input_path);
+
 	if(output_path.endsWith('.dot')){
 		output_path = output_path.substring(0, output_path.length-4);
 	}
 
-	let template_content  = fs.readFileSync(input_path);
+	let template_content = fse.readFileSync(input_path);
 
 	let output_content = processDotTemplate(
 		input_path, template_content, dot_vars
 	);
 
-	fs.writeFileSync(output_path, output_content);
+	fse.writeFileSync(output_path, output_content);
 	file_utils.syncFileMetaData(input_path, output_path);
 }
 
@@ -228,7 +214,8 @@ function processDotFile(input_path, output_path, dot_vars){
  * Processes a tree.yaml file in order to create a set of empty
  * files and directories in the root directory
  */
-function processTreeYaml(input_file, output_root_dir, dot_vars){
+async function processTreeYaml(input_file, output_root_dir, dot_vars){
+	log.trace("Processing tree yaml: " + input_file);
 
 	if(output_root_dir.endsWith(path.basename(input_file))){
 		// if trying to copy to corresponding tree.yaml in output
@@ -236,9 +223,9 @@ function processTreeYaml(input_file, output_root_dir, dot_vars){
 		output_root_dir = path.dirname(output_root_dir) + "/";
 	}
 
-	fse.ensureDirSync(output_root_dir);
+	await fse.ensureDir(output_root_dir);
 
-	let content = fs.readFileSync(input_file).toString('utf8');
+	let content = fse.readFileSync(input_file).toString('utf8');
 
 	if(input_file.endsWith('.dot')){
 		content = processDotTemplate(input_file, content, dot_vars);
@@ -294,24 +281,24 @@ function processTreeYaml(input_file, output_root_dir, dot_vars){
 			let full_path = output_root_dir + name;
 
 			let stats = null;
-			if(fs.existsSync(full_path)){
-				stats = fs.statSync(full_path);
+			if(fse.existsSync(full_path)){
+				stats = fse.statSync(full_path);
 			}
 
 			if(name.endsWith('/')){
 				if(stats != null && !stats.isDirectory()){
 					log.warn("Overwritting existing non-directory with directory: " + full_path);
-					fs.unlinkSync(full_path);
+					fse.unlinkSync(full_path);
 				}
 				fse.ensureDirSync(full_path);
 			} else {
 				if(stats == null){
-					fs.writeFileSync(full_path, '');
+					fse.writeFileSync(full_path, '');
 				} else {
 					if(!stats.isFile()){
 						log.warn("Overwritting existing non-file with file: " + full_path);
-						fs.unlinkSync(full_path);
-						fs.wrteFileSync(full_path, '');
+						fse.unlinkSync(full_path);
+						fse.wrteFileSync(full_path, '');
 					} else {
 						log.debug("Not overwriting existing file: " + full_path);
 					}
