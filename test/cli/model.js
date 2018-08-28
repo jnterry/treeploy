@@ -5,6 +5,7 @@
 "use strict";
 
 require('../common.js');
+const fs = require('fs');
 
 let dot_template_dump_data = `{
 "data": {{= JSON.stringify(data, null, '  ') }}

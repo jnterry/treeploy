@@ -6,6 +6,7 @@
 "use strict";
 
 require('../common.js');
+const fs = require('fs');
 
 let source_directory = {
 	'hello.txt' : mockfs.file({

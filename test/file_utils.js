@@ -5,6 +5,7 @@
 "use strict";
 
 require('./common.js');
+const fs = require('fs');
 
 const execSync   = require('child_process').execSync;
 

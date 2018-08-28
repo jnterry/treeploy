@@ -67,10 +67,7 @@ it('File named .dot is not processed', () => {
 			},
 		},
 	}).then(() => {
-		expect(fs.existsSync  ('target/.dot')         ).is.true;
-		expect(fs.statSync    ('target/.dot').isFile()).is.true;
-		let content = fs.readFileSync('target/.dot').toString('utf8');
-		expect(content).is.deep.equal('Hello {{= it.name }}!');
+		expectFile('target/.dot', { content: 'Hello {{= it.name }}!' });
 	});
 });
 
