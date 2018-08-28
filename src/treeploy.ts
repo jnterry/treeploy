@@ -2,13 +2,13 @@
  * Main file exporting the treeploy function
  */
 
-const yaml       = require('node-yaml');
-const dot_engine = require('dot');
-const path       = require('path');
+import yaml       from 'js-yaml';
+import dot_engine from 'dot';
+import path       from 'path';
+import fs         from 'fs';
 
-const FileDriverLocal = require('./file_drivers/local.js');
-
-const makeLogger = require('./log.js');
+import FileDriverLocal from './file_drivers/local';
+import log             from './log.js';
 
 dot_engine.templateSettings = {
   evaluate      : /\{\{([\s\S]+?)\}\}/g,
@@ -22,14 +22,57 @@ dot_engine.templateSettings = {
   strip         : false,
   append        : true,
   selfcontained : false,
+	useParams     : /.*/, // these fields aren't documented...
+	defineParams  : /.*/, // no idea what to set them to...
 };
-
 
 // regexes for matching different types of files
 const file_name_regex = {
 	tree_descriptor : /^tree.ya?ml(.dot)?$/,
 	skipped         : /^#.*#$|^.#|.*~$/, // emacs backup files
 	template        : /^.+\.dot$/,
+};
+
+export class TreeployOptions {
+	/** Verbosity level to set for global [[Logger]] */
+	verbosity  : number  = 0;
+
+	/** The model to be passed to doT templates */
+	dot_models : object  = { it : {}};
+
+	/** Disables CLI nag if destination exists */
+	overwrite  : boolean = false;
+
+	/** Disabled CLI nag if not running as root */
+	noroot     : boolean = false;
+};
+
+class TreeployContext {
+	constructor(options : TreeployOptions){
+		if(options == null){
+			options = new TreeployOptions;
+		}
+
+		log.setLevel(options.verbosity);
+		this.overwrite = options.overwrite;
+
+		// we need to guarentee that the dot_engine.varname order matches up
+		// with the order of parameters we pass to templates, convert everything
+		// to an array here and use that from now on
+		let models = Object.keys(options.dot_models);
+		this.dot_models = models.map((x : string) => (<any>options).dot_models[x] );
+		dot_engine.templateSettings.varname = models.join(',');
+
+		this.source = new FileDriverLocal(true );
+		this.target = new FileDriverLocal(false);
+
+
+	}
+
+	dot_models : Array<any>;
+	overwrite  : boolean;
+	source     : FileDriverLocal;
+	target     : FileDriverLocal;
 };
 
 /**
@@ -41,59 +84,42 @@ const file_name_regex = {
  * @return Promise which resolves to true once all operations have completed,
  * else a promise which is rejected
  */
-async function treeploy(source_path, target_path, options){
-	if(options            == null) { options            = {}; }
-	if(options.verbosity  == null) { options.verbosity  =  0; }
-	if(options.dot_models == null) { options.dot_models = {}; }
+async function treeploy(source_path : string,
+												target_path : string,
+												options     : TreeployOptions){
 
-	if(typeof options.dot_models != 'object'){
-		log.warn('Expected options.dot_models to be an object mapping doT.js varnames to values - dot_models will be ignored, template evaluation may fail');
-		options.dot_models = [];
-	} else {
-		// we need to guarentee that the dot_engine.varname order matches up
-		// with the order of parameters we pass to templates, convert everything
-		// to an array here and use that from now on
+	let cntx = new TreeployContext(options);
 
-		let models = Object.keys(options.dot_models);
-
-		options.dot_models = models.map((x) => options.dot_models[x]);
-		dot_engine.templateSettings.varname = models.join(',');
-	}
-
-	global.log = makeLogger(options.verbosity);
-
-	let fdriver = {
-		source : new FileDriverLocal(true ),
-		target : new FileDriverLocal(false),
-	};
-
-	if(!(await fdriver.source.exists(source_path))){
+	if(!(await cntx.source.exists(source_path))){
 		throw new Error("Source path '" + source_path + "' does not exist!");
 	}
 
-	let input_stat = await fdriver.source.stat(source_path);
+	let input_stat = await cntx.source.stat(source_path);
 
 	if(input_stat.isDirectory()){
-		return treeployDirectory(fdriver, source_path, target_path, options);
+		return treeployDirectory(cntx, source_path, target_path);
 	} else if (input_stat.isFile()){
-		return treeployFile(fdriver, source_path, target_path, options);
+		return treeployFile(cntx, source_path, target_path);
 	} else {
 		throw new Error("Source path is neither a directory nor a file");
 	}
 }
 
-async function treeployDirectory(fdriver, source_path, target_path, options){
+async function treeployDirectory(cntx        : TreeployContext,
+																 source_path : string,
+																 target_path : string){
+
 	log.trace('Processing source directory: ' + source_path);
 
 	if(!source_path.endsWith('/')){ source_path += '/'; }
 	if(!target_path.endsWith('/')){ target_path += '/'; }
 
-	if(await fdriver.target.exists(target_path)){
-		let stat = await fdriver.target.stat(target_path);
+	if(await cntx.target.exists(target_path)){
+		let stat = await cntx.target.stat(target_path);
 		if(!stat.isDirectory()){
-			if(options.overwrite){
+			if(cntx.overwrite){
 				log.info("Removing conflicting non-directory in place of: " + target_path);
-				await fdriver.target.remove(target_path);
+				await cntx.target.remove(target_path);
 			} else {
 				throw new Error(
 					"Path '" + target_path +
@@ -103,25 +129,25 @@ async function treeployDirectory(fdriver, source_path, target_path, options){
 		}
 	}
 
-	await fdriver.target.mkdir(target_path);
-	await fdriverCopyAttributes(fdriver, source_path, target_path);
+	await cntx.target.mkdir(target_path);
+	await copyFileAttributes(cntx, source_path, target_path);
 
-	let entries = await fdriver.source.readdir(source_path);
+	let entries = await cntx.source.readdir(source_path);
 
 	// we need delay tree yaml files to the end since they may manipulate the
 	// permisions of normal files
-	let tree_files = [];
+	let tree_files : Array<String> = [];
 
 	for(let entry of entries) {
-		let stat = await fdriver.source.stat(source_path + entry);
+		let stat = await cntx.source.stat(source_path + entry);
 
 		if(stat.isDirectory()){
-			await treeployDirectory(fdriver, source_path + entry, target_path + entry, options);
+			await treeployDirectory(cntx, source_path + entry, target_path + entry);
 		} else if(stat.isFile()){
 			if(entry.match(file_name_regex.tree_descriptor)){
 				tree_files.push(entry);
 			} else {
-				await treeployFile(fdriver, source_path + entry, target_path + entry, options);
+				await treeployFile(cntx, source_path + entry, target_path + entry);
 			}
 
 		} else {
@@ -130,18 +156,17 @@ async function treeployDirectory(fdriver, source_path, target_path, options){
 	}
 
 	for(let x of tree_files){
-		await treeployFile(fdriver, source_path + x, target_path + x, options);
+		await treeployFile(cntx, source_path + x, target_path + x);
 	}
 
 	return true;
 }
 
-async function treeployFile(fdriver, source_path, target_path, options){
+async function treeployFile(cntx        : TreeployContext,
+														source_path : string,
+														target_path : string){
 
 	let file_name = path.basename(source_path);
-
-	let dot_models = undefined;
-	if(options != null){ dot_models = options.dot_models; }
 
 	if(file_name.match(file_name_regex.skipped)){
 		log.info("Skipping file which matches skip regex: " + source_path);
@@ -149,18 +174,17 @@ async function treeployFile(fdriver, source_path, target_path, options){
 	}
 
 	if (file_name.match(file_name_regex.tree_descriptor)){
-		return processTreeYaml(fdriver, source_path, target_path, dot_models);
+		return processTreeYaml(cntx, source_path, target_path);
 	}
 
 	if(file_name.match(file_name_regex.template)){
-		return processDotFile(fdriver, source_path, target_path, dot_models)
+		return processDotFile(cntx, source_path, target_path)
 	}
 
 	// otherwise this is just a standard file...
 	log.debug("Copying file " + source_path + " to " + target_path);
 
-	await fdriverCopy(fdriver, source_path, target_path);
-	fdriverCopyAttributes(fdriver, source_path, target_path);
+	return copyFile(cntx, source_path, target_path);
 }
 
 /**
@@ -170,11 +194,13 @@ async function treeployFile(fdriver, source_path, target_path, options){
  * @param {string} template_name - The name of the the template (generally the
  * file it was loaded from), used for generating message on error only
  * @param {string} template      - contents of the template
- * @param {object} dot_vars      - Variables to be passed as model to template
+ * @param {object[]} dot_vars    - Variables to be passed as model to template
 
  */
-function processDotTemplate(template_name, template, dot_vars){
-	let template_function = dot_engine.template(template);
+function processDotTemplate(template_name : string,
+														template      : string|Buffer,
+														dot_vars      : object[]){
+	let template_function = dot_engine.template(template.toString());
 	let output_content    = null;
 
 	try {
@@ -192,23 +218,26 @@ function processDotTemplate(template_name, template, dot_vars){
  *
  * @param {string}  input_path  - Path of the dot file to process
  * @param {string}  output_path - Path to write the result to
- * @param {object}  dot_vars    - Variables to be passed as model to template
  */
-async function processDotFile(fdriver, source_path, target_path, dot_vars){
+async function processDotFile(cntx        : TreeployContext,
+															source_path : string,
+															target_path : string
+														 ){
+
 	log.trace("Processing dot template: " + source_path);
 
 	if(target_path.endsWith('.dot')){
 		target_path = target_path.substring(0, target_path.length-4);
 	}
 
-	let template_content = await fdriver.source.readFile(source_path);
+	let template_content = await cntx.source.readFile(source_path);
 
 	let output_content = processDotTemplate(
-		source_path, template_content, dot_vars
+		source_path, template_content, cntx.dot_models
 	);
 
-	await fdriver.target.writeFile(target_path, output_content);
-	return fdriverCopyAttributes(fdriver, source_path, target_path);
+	await cntx.target.writeFile(target_path, output_content);
+	return copyFileAttributes(cntx, source_path, target_path);
 }
 
 
@@ -216,7 +245,11 @@ async function processDotFile(fdriver, source_path, target_path, dot_vars){
  * Processes a tree.yaml file in order to create a set of empty
  * files and directories in the root directory
  */
-async function processTreeYaml(fdriver, input_file, output_root_dir, dot_vars){
+async function processTreeYaml(cntx            : TreeployContext,
+															 input_file      : string,
+															 output_root_dir : string
+															){
+
 	log.trace("Processing tree yaml: " + input_file);
 
 	if(output_root_dir.endsWith(path.basename(input_file))){
@@ -225,19 +258,19 @@ async function processTreeYaml(fdriver, input_file, output_root_dir, dot_vars){
 		output_root_dir = path.dirname(output_root_dir) + "/";
 	}
 
-	await fdriver.target.mkdir(output_root_dir);
+	await cntx.target.mkdir(output_root_dir);
 
-	let content = (await fdriver.source.readFile(input_file));
+	let content = (await cntx.source.readFile(input_file));
 
 	if(input_file.endsWith('.dot')){
-		content = processDotTemplate(input_file, content, dot_vars);
+		content = processDotTemplate(input_file, content, cntx.dot_models);
 	}
 
-	let tree = yaml.parse(content);
+	let tree = yaml.safeLoad(content.toString());
 
 	return buildTreeFromDescription(tree, output_root_dir);
 
-	async function buildTreeFromDescription(tree, output_root_dir){
+	async function buildTreeFromDescription(tree : string, output_root_dir : string){
 		if(!output_root_dir.endsWith('/')){
 			output_root_dir += '/';
 		}
@@ -251,8 +284,8 @@ async function processTreeYaml(fdriver, input_file, output_root_dir, dot_vars){
 		}
 
 		for(let entry of tree){
-			let name = null;
-			let opts = null;
+			let name : string = '';
+			let opts : any    = {};
 
 			if(typeof entry == 'string'){
 				name = entry;
@@ -264,7 +297,7 @@ async function processTreeYaml(fdriver, input_file, output_root_dir, dot_vars){
 					throw new Error(
 						"Invalid tree.yaml file '" + input_file +
 						"' - expected single name to map to options object, got: " +
-						JSON.toString(entry)
+						JSON.stringify(entry)
 					);
 				}
 
@@ -282,32 +315,32 @@ async function processTreeYaml(fdriver, input_file, output_root_dir, dot_vars){
 
 			let target_full_path = output_root_dir + name;
 
-			let stats = null;
-			if(await fdriver.target.exists(target_full_path)){
-				stats = await fdriver.target.stat(target_full_path);
+			let stats : fs.Stats|null = null;
+			if(await cntx.target.exists(target_full_path)){
+				stats = await cntx.target.stat(target_full_path);
 			}
 
 			if(name.endsWith('/')){
 				if(stats != null && !stats.isDirectory()){
 					log.warn("Overwritting existing non-directory with directory: " + target_full_path);
-					await fdriver.target.remove(target_full_path);
+					await cntx.target.remove(target_full_path);
 				}
-				await fdriver.target.mkdir(target_full_path);
+				await cntx.target.mkdir(target_full_path);
 			} else {
 				if(stats == null){
-					await fdriver.target.writeFile(target_full_path, '');
+					await cntx.target.writeFile(target_full_path, '');
 				} else {
 					if(!stats.isFile()){
 						log.warn("Overwritting existing non-file with file: " + target_full_path);
-						await fdriver.target.remove(target_full_path);
-						await fdriver.target.writeFile(target_full_path, '');
+						await cntx.target.remove(target_full_path);
+						await cntx.target.writeFile(target_full_path, '');
 					} else {
 						log.debug("Not overwriting existing file: " + target_full_path);
 					}
 				}
 			}
 
-			await fdriver.target.setAttributes(target_full_path, opts);
+			await cntx.target.setAttributes(target_full_path, opts);
 
 			if(opts.children != null){
 				await buildTreeFromDescription(opts.children, target_full_path);
@@ -323,19 +356,23 @@ async function processTreeYaml(fdriver, input_file, output_root_dir, dot_vars){
  * @param in_path {string}  - Path to the file whose meta data you wish to copy
  * @param out_path {string} - Path to file to apply to meta data to
  */
-async function fdriverCopyAttributes(fdriver, source_path, target_path){
-	let attr = await fdriver.source.getAttributes(source_path);
-	return fdriver.target.setAttributes(target_path, attr);
+async function copyFileAttributes(cntx        : TreeployContext,
+																	source_path : string,
+																	target_path : string){
+	let attr = await cntx.source.getAttributes(source_path);
+	return cntx.target.setAttributes(target_path, attr);
 }
 
 /**
  * Helper function which copies a file between a source and
  * target FileDriver pair
  */
-async function fdriverCopy(fdriver, source_path, target_path){
-	let content = await fdriver.source.readFile(source_path);
-	await fdriver.target.writeFile(target_path, content);
-	return fdriverCopyAttributes(fdriver, source_path, target_path);
+async function copyFile(cntx        : TreeployContext,
+												source_path : string,
+												target_path : string){
+	let content = await cntx.source.readFile(source_path);
+	await cntx.target.writeFile(target_path, content);
+	return copyFileAttributes(cntx, source_path, target_path);
 }
 
-module.exports = treeploy;
+export default treeploy;

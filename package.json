@@ -9,8 +9,11 @@
 		"url": "git://github.com/jnterry/treeploy.git"
 	},
 	"scripts": {
-		"test": "sudo -E env \"PATH=$PATH\" ./node_modules/.bin/mocha test/all.js --reporter spec",
-		"cover": "sudo -E env \"PATH=$PATH\" node_modules/istanbul/lib/cli.js cover node_modules/mocha/bin/_mocha --root ./src/ --include-all-sources -- -R spec test/all.js"
+		"build": "./node_modules/.bin/tsc",
+		"test": "sudo -E env \"PATH=$PATH\" ./node_modules/.bin/nyc ./node_modules/.bin/mocha && ./node_modules/.bin/nyc report --reporter lcov --reporter html",
+		"clean": "sudo rm -rf dist coverage exe",
+		"cbr": "npm run clean && npm run build && npm test",
+		"docs": "./node_modules/.bin/typedoc --out docs"
 	},
 	"author": "Jamie Terry",
 	"license": "MIT",
@@ -19,19 +22,25 @@
 	},
 	"dependencies": {
 		"readline-sync": "1.4.9",
-		"node-yaml": "3.1.1",
+		"js-yaml": "3.12.0",
 		"dot": "1.1.2",
 		"colors": "1.3.2"
 	},
 	"devDependencies": {
+		"@types/node": "10.9.2",
+		"@types/dot": "1.1.2",
+		"@types/js-yaml": "3.11.2",
+		"@types/readline-sync": "1.4.3",
 		"mocha": "5.2.0",
 		"chai": "4.1.2",
 		"chai-as-promised": "7.1.1",
 		"istanbul": "0.4.5",
 		"mock-fs": "4.6.0",
 		"coveralls": "3.0.2",
-		"jsdoc": "3.5.5",
-		"minami": "1.2.3",
-		"pkg": "4.3.4"
+		"typedoc": "0.12.0",
+		"pkg": "4.3.4",
+		"typescript": "3.0.1",
+		"nyc": "13.0.1",
+		"source-map-support": "0.5.9"
 	}
 }

@@ -6,7 +6,7 @@
 
 require('./common.js');
 const fs = require('fs');
-const FileDriverLocal = require('../src/file_drivers/local.js');
+const FileDriverLocal = require('../dist/file_drivers/local.js').default;
 
 const execSync   = require('child_process').execSync;
 
