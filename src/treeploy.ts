@@ -34,9 +34,16 @@ const file_name_regex = {
 };
 
 export class TreeployOptions {
+	/** Verbosity level to set for global [[Logger]] */
 	verbosity  : number  = 0;
+
+	/** The model to be passed to doT templates */
 	dot_models : object  = { it : {}};
+
+	/** Disables CLI nag if destination exists */
 	overwrite  : boolean = false;
+
+	/** Disabled CLI nag if not running as root */
 	noroot     : boolean = false;
 };
 

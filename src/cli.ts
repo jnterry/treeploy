@@ -15,6 +15,13 @@ import log                 from './log';
 import treeploy            from './treeploy';
 import { TreeployOptions } from './treeploy';
 
+/**
+ * Function implementing the command line interface to treeploy
+ * @param arg_list - List of command line arguments passed to treeploy
+ *
+ * @return Promise which resolves to the exit code that the CLI
+ * executable should exit with
+ */
 async function treeploy_cli(arg_list : Array <string>){
 
 	/////////////////////////////////////////////////////////
@@ -95,11 +102,13 @@ async function treeploy_cli(arg_list : Array <string>){
 	/////////////////////////////////////////////////////////
 }
 
+/** Prints usage prompt to console */
 function printUsage(){
 	console.log("Usage: treeploy INPUT_PATH OUTPUT_PATH [DOT_VARS_FILE]");
 	console.log("       Run 'treeploy --help' for more information");
 }
 
+/** Prints full help infomation to console */
 function displayHelp(){
 	console.log(`
 Usage:
@@ -155,6 +164,17 @@ Options:
 `);
 }
 
+/**
+ * Parses extra optional flags arguments appearing after the source and
+ * destination path in order to construct a TreeployOptions object
+ *
+ * @param arg_list - List of arguments EXCLUDING the first two which represent
+ * the source and destination paths
+ *
+ * @return TreeployOptions object representing parsed options, or null if the
+ * program should terminate without processing the source and destination
+ * paths
+ */
 function parseOptionalArguments(arg_list : Array<string>) : TreeployOptions|null{
 	let options = new TreeployOptions();
 
@@ -231,19 +251,18 @@ function parseOptionalArguments(arg_list : Array<string>) : TreeployOptions|null
 }
 
 /**
- * Loads a doT.js model file
+ * Loads a doT.js model file (yaml or json)
  *
- * @param {string} value - The argument to the --modelfile CLI flag, should be
- * of the form 'model.field=./filename.json' or './filename.json', in later case
- * entire options.dot_models variable will be set to file contents
- * File to load must have one of following extensions: .json, .yaml or .yml
- *
- * @param {object} options - Current state of parsed options, this will be
+ * @param model_path - Path to the field in the dot_model to modify, eg
+ * field.name
+ * @param file_name - Path of file to load
+ * @param options - Current state of parsed options, this will be
  * modified to reflect new options with additional model field
  */
 function processFlagModelFile(model_path : string,
 															file_name  : string,
-															options    : TreeployOptions){
+															options    : TreeployOptions
+														 ) : void {
 	let extension = file_name.split('.').pop();
 
 	if(extension === undefined ||
@@ -280,13 +299,13 @@ function processFlagModelFile(model_path : string,
  *
  * @param {string} field_name  - The name of the field to modify
  * @param {string} field_value - The new value for field
- *
  * @param {object} options - Current state of parsed options, this will be
  * modified to reflect new options with additional model field
  */
 function processFlagModel(field_name  : string,
 													field_value : any,
-													options     : TreeployOptions){
+													options     : TreeployOptions
+												 ) : void {
 	if(field_value.match(/^[0-9]+$/)){
 		field_value = parseInt(field_value);
 	} else if(field_value.match(/^(\+|-)?[0-9]*\.[0-9]+$/)){
@@ -308,9 +327,19 @@ function processFlagModel(field_name  : string,
 	setModelField(field_name, field_value, options);
 }
 
+/**
+ * Executes a command, parses its output as JSON and updates the dot_model
+ * accordingly
+ *
+ * @param field_name  - The name of the field to modify
+ * @param field_value - The command to run whose output will be parsed as JSON
+ * @param options - Current state of parsed options, this will be
+ * modified to reflect new options with additional model field
+ */
 function processFlagModelCmd(field   : string,
 														 cmd     : string,
-														 options : TreeployOptions){
+														 options : TreeployOptions
+														) : void {
 	let cmd_result = execSync(cmd);
 	let cmd_stdout = cmd_result.toString('utf8');
 	try {
@@ -328,12 +357,10 @@ function processFlagModelCmd(field   : string,
  * if setting web.host.domain it will create the host object within
  * web, and then set the domain field of that
  *
- * @param {string} field_name - Name of field, may contain dots to indicate
+ * @param field_name - Name of field, may contain dots to indicate
  * fields within objects
- *
- * @param {any}    field_value - The value to set the field to
- *
- * @param {object} options - Current state of parsed options, this will be
+ * @param field_value - The value to set the field to
+ * @param  options - Current state of parsed options, this will be
  * modified to reflect new options with additional model field
  */
 function setModelField(field_name  : string,
