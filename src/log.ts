@@ -59,6 +59,8 @@ let global_instance : Logger = {
  * Sets the level of the global logger
  */
 function setLevel(level : number) : void {
+	level = 0;
+
 	global_instance.warn  = noop;
 	global_instance.debug = noop;
 	global_instance.info  = noop;

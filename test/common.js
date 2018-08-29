@@ -4,7 +4,6 @@
 
 global.mockfs       = require('mock-fs');
 
-global.file_utils   = require('../dist/file_utils.js');
 global.treeploy     = require('../dist/treeploy.js').default;
 global.treeploy_cli = require('../dist/cli.js').default;
 
@@ -34,7 +33,8 @@ function checkStats(stats, opts){
 	if(opts == null){ return; }
 
 	if(opts.mode != null){
-		expect(file_utils.getStatPermissionString(stats)).is.deep.equal(opts.mode);
+		let perm_string = '0' + (stats.mode & parseInt('777', 8)).toString(8);
+		expect(perm_string).is.deep.equal(opts.mode);
 	}
 
 	if(opts.uid != null){

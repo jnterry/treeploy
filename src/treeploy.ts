@@ -7,8 +7,9 @@ import dot_engine from 'dot';
 import path       from 'path';
 import fs         from 'fs';
 
-import FileDriverLocal from './file_drivers/local';
-import log             from './log.js';
+import { FileDriver, PathType } from './file_drivers/FileDriver'
+import FileDriverLocal          from './file_drivers/Local';
+import log                      from './log.js';
 
 dot_engine.templateSettings = {
   evaluate      : /\{\{([\s\S]+?)\}\}/g,
@@ -48,7 +49,10 @@ export class TreeployOptions {
 };
 
 class TreeployContext {
-	constructor(options : TreeployOptions){
+	constructor(source_path : string,
+							target_path : string,
+							options     : TreeployOptions
+						 ){
 		if(options == null){
 			options = new TreeployOptions;
 		}
@@ -63,16 +67,14 @@ class TreeployContext {
 		this.dot_models = models.map((x : string) => (<any>options).dot_models[x] );
 		dot_engine.templateSettings.varname = models.join(',');
 
-		this.source = new FileDriverLocal(true );
-		this.target = new FileDriverLocal(false);
-
-
+		this.source = FileDriverLocal.create(source_path, false, {});
+		this.target = FileDriverLocal.create(target_path,  true, {});
 	}
 
 	dot_models : Array<any>;
 	overwrite  : boolean;
-	source     : FileDriverLocal;
-	target     : FileDriverLocal;
+	source     : FileDriver;
+	target     : FileDriver;
 };
 
 /**
@@ -88,20 +90,19 @@ async function treeploy(source_path : string,
 												target_path : string,
 												options     : TreeployOptions){
 
-	let cntx = new TreeployContext(options);
+	let cntx = new TreeployContext(source_path, target_path, options);
 
-	if(!(await cntx.source.exists(source_path))){
-		throw new Error("Source path '" + source_path + "' does not exist!");
-	}
+	let path_type = await cntx.source.getPathType(source_path);
 
-	let input_stat = await cntx.source.stat(source_path);
-
-	if(input_stat.isDirectory()){
-		return treeployDirectory(cntx, source_path, target_path);
-	} else if (input_stat.isFile()){
-		return treeployFile(cntx, source_path, target_path);
-	} else {
-		throw new Error("Source path is neither a directory nor a file");
+	switch(path_type){
+		case PathType.NoExist:
+			throw new Error("The source path does not exist");
+		case PathType.Other:
+			throw new Error("The source path is neither a directory nor a file");
+		case PathType.File:
+			return treeployFile(cntx, source_path, target_path);
+		case PathType.Directory:
+			return treeployDirectory(cntx, source_path, target_path);
 	}
 }
 
@@ -114,23 +115,8 @@ async function treeployDirectory(cntx        : TreeployContext,
 	if(!source_path.endsWith('/')){ source_path += '/'; }
 	if(!target_path.endsWith('/')){ target_path += '/'; }
 
-	if(await cntx.target.exists(target_path)){
-		let stat = await cntx.target.stat(target_path);
-		if(!stat.isDirectory()){
-			if(cntx.overwrite){
-				log.info("Removing conflicting non-directory in place of: " + target_path);
-				await cntx.target.remove(target_path);
-			} else {
-				throw new Error(
-					"Path '" + target_path +
-					"' exists as non-directory and options.overwrite is not set"
-				);
-			}
-		}
-	}
-
-	await cntx.target.mkdir(target_path);
-	await copyFileAttributes(cntx, source_path, target_path);
+	await cntx.target.mkdir(target_path, { recursive: true, overwrite: cntx.overwrite });
+	await copyPathAttributes(cntx, source_path, target_path);
 
 	let entries = await cntx.source.readdir(source_path);
 
@@ -139,19 +125,22 @@ async function treeployDirectory(cntx        : TreeployContext,
 	let tree_files : Array<String> = [];
 
 	for(let entry of entries) {
-		let stat = await cntx.source.stat(source_path + entry);
+		let path_type = await cntx.source.getPathType(source_path + entry);
 
-		if(stat.isDirectory()){
-			await treeployDirectory(cntx, source_path + entry, target_path + entry);
-		} else if(stat.isFile()){
-			if(entry.match(file_name_regex.tree_descriptor)){
-				tree_files.push(entry);
-			} else {
-				await treeployFile(cntx, source_path + entry, target_path + entry);
-			}
-
-		} else {
-			log.warn("Skipping: " + source_path + " - neither a directory nor a file");
+		switch(path_type){
+			case PathType.Directory:
+				await treeployDirectory(cntx, source_path + entry, target_path + entry);
+				break;
+			case PathType.File:
+				if(entry.match(file_name_regex.tree_descriptor)){
+					tree_files.push(entry);
+				} else {
+					await treeployFile(cntx, source_path + entry, target_path + entry);
+				}
+				break;
+			default:
+				log.warn("Skipping: " + source_path + " - neither a directory nor a file");
+				break;
 		}
 	}
 
@@ -237,7 +226,7 @@ async function processDotFile(cntx        : TreeployContext,
 	);
 
 	await cntx.target.writeFile(target_path, output_content);
-	return copyFileAttributes(cntx, source_path, target_path);
+	return copyPathAttributes(cntx, source_path, target_path);
 }
 
 
@@ -258,8 +247,6 @@ async function processTreeYaml(cntx            : TreeployContext,
 		output_root_dir = path.dirname(output_root_dir) + "/";
 	}
 
-	await cntx.target.mkdir(output_root_dir);
-
 	let content = (await cntx.source.readFile(input_file));
 
 	if(input_file.endsWith('.dot')){
@@ -268,6 +255,11 @@ async function processTreeYaml(cntx            : TreeployContext,
 
 	let tree = yaml.safeLoad(content.toString());
 
+
+	await  cntx.target.mkdir(output_root_dir, { recursive: true,
+																							overwrite: cntx.overwrite
+																						}
+													);
 	return buildTreeFromDescription(tree, output_root_dir);
 
 	async function buildTreeFromDescription(tree : string, output_root_dir : string){
@@ -315,28 +307,29 @@ async function processTreeYaml(cntx            : TreeployContext,
 
 			let target_full_path = output_root_dir + name;
 
-			let stats : fs.Stats|null = null;
-			if(await cntx.target.exists(target_full_path)){
-				stats = await cntx.target.stat(target_full_path);
-			}
+			let path_type = await cntx.target.getPathType(target_full_path);
 
 			if(name.endsWith('/')){
-				if(stats != null && !stats.isDirectory()){
-					log.warn("Overwritting existing non-directory with directory: " + target_full_path);
-					await cntx.target.remove(target_full_path);
-				}
-				await cntx.target.mkdir(target_full_path);
+				await cntx.target.mkdir(target_full_path, { recursive: true, overwrite: cntx.overwrite });
 			} else {
-				if(stats == null){
-					await cntx.target.writeFile(target_full_path, '');
-				} else {
-					if(!stats.isFile()){
-						log.warn("Overwritting existing non-file with file: " + target_full_path);
-						await cntx.target.remove(target_full_path);
-						await cntx.target.writeFile(target_full_path, '');
-					} else {
+
+				switch(path_type){
+					case PathType.Directory:
+					case PathType.Other:
+						if(cntx.overwrite){
+							log.info("Overwritting existing non-file with file: " + target_full_path);
+							await cntx.target.remove   (target_full_path);
+							await cntx.target.writeFile(target_full_path, '');
+						} else {
+							throw new Error("Conflicting non-file found at target: " + target_full_path);
+						}
+						break;
+					case PathType.File:
 						log.debug("Not overwriting existing file: " + target_full_path);
-					}
+						break;
+					case PathType.NoExist:
+						await cntx.target.writeFile(target_full_path, '');
+						break;
 				}
 			}
 
@@ -356,7 +349,7 @@ async function processTreeYaml(cntx            : TreeployContext,
  * @param in_path {string}  - Path to the file whose meta data you wish to copy
  * @param out_path {string} - Path to file to apply to meta data to
  */
-async function copyFileAttributes(cntx        : TreeployContext,
+async function copyPathAttributes(cntx        : TreeployContext,
 																	source_path : string,
 																	target_path : string){
 	let attr = await cntx.source.getAttributes(source_path);
@@ -372,7 +365,7 @@ async function copyFile(cntx        : TreeployContext,
 												target_path : string){
 	let content = await cntx.source.readFile(source_path);
 	await cntx.target.writeFile(target_path, content);
-	return copyFileAttributes(cntx, source_path, target_path);
+	return copyPathAttributes(cntx, source_path, target_path);
 }
 
 export default treeploy;
