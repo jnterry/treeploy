@@ -7,6 +7,7 @@ import { promisify }   from 'util';
 import {execFileSync } from 'child_process';
 import path            from 'path';
 
+import { FileAttr, IFileDriverWriter, IFileDriverReader } from './FileDriver';
 import log        from './../log';
 import file_utils from './../file_utils';
 
@@ -20,11 +21,7 @@ let rmdirAsync     = promisify(fs.rmdir);
 let mkdirAsync     = promisify(fs.mkdir);
 ///////////////////////////////////////////////////////
 
-interface FileAttr {
-	owner : string | number,
-	group : string | number,
-	mode  : string
-};
+
 
 ///////////////////////////////////////////////////////
 // Make the local file driver
