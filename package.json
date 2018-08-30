@@ -41,6 +41,24 @@
 		"pkg": "4.3.4",
 		"typescript": "3.0.1",
 		"nyc": "13.0.1",
-		"source-map-support": "0.5.9"
+		"source-map-support": "0.5.9",
+		"rewire": "4.0.1",
+		"ts-node": "7.0.1"
+	},
+	"nyc": {
+		"extension": [
+			".ts"
+		],
+		"include": [
+			"src/**/*"
+		],
+		"exclude": [
+			"**/*.d.ts"
+		],
+		"all": true,
+		"require": [
+			"ts-node/register",
+			"source-map-support/register"
+		]
 	}
 }

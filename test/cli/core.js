@@ -62,13 +62,52 @@ it('Relative and absolute paths', () => {
 		});
 });
 
-it('Overwrite existing target', () => {
+it('Overwrite file with directory fails with no flags', () => {
+	mockfs({
+		source : source_structure,
+		existing: 'uh oh I exist'
+	});
+
+	return treeploy_cli(['./source', 'existing'])
+		.then((exit_code) => {
+			expect(exit_code).is.not.deep.equal(0);
+			expectFile('existing', 'uh oh I exist');
+		});
+});
+
+it('Overwrite file with directory fails with overwrite but not force', () => {
 	mockfs({
 		source : source_structure,
 		existing: 'uh oh I exist'
 	});
 
 	return treeploy_cli(['./source', 'existing', '--overwrite', '-vvv'])
+		.then((exit_code) => {
+			expect(exit_code).is.not.deep.equal(0);
+			expectFile('existing', 'uh oh I exist');
+		});
+});
+
+it('Overwrite file with directory succeeds with force', () => {
+	mockfs({
+		source : source_structure,
+		existing: 'uh oh I exist'
+	});
+
+	return treeploy_cli(['./source', 'existing', '--force'])
+		.then((exit_code) => {
+			expect(exit_code).is.deep.equal(0);
+			checkTarget('existing');
+		});
+});
+
+it('Overwrite file with directory succeeds with force and overwrite', () => {
+	mockfs({
+		source : source_structure,
+		existing: 'uh oh I exist'
+	});
+
+	return treeploy_cli(['./source', 'existing', '--overwrite', '--force'])
 		.then((exit_code) => {
 			expect(exit_code).is.deep.equal(0);
 			checkTarget('existing');
