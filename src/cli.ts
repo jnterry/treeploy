@@ -6,7 +6,6 @@
 "use strict"
 
 import fs            from 'fs';
-import stdin         from 'readline-sync';
 import yaml          from 'js-yaml';
 import path          from 'path';
 import { execSync }  from 'child_process';
@@ -61,19 +60,6 @@ async function treeploy_cli(arg_list : Array <string>){
 
 
 	/////////////////////////////////////////////////////////
-	// Check if we are root
-	if(!options.noroot && process.getuid() != 0){
-		console.log('Not running as root, may not be able set file permissions, owners, etc');
-		let response = stdin.question('Continue? [y/N]');
-		if(!response.match('[Yy]|[Yy][Ee][Ss]')){
-			return 0;
-		}
-	}
-	/////////////////////////////////////////////////////////
-
-
-
-	/////////////////////////////////////////////////////////
 	// Run treeploy
 	return treeploy(input_path, output_path, options)
 		.then(() => 0)
@@ -117,9 +103,6 @@ Options:
 |                     | as it should - for example removing a file in order to |
 |                     | create a directory of the same name, or vice-versa     |
 |                     | This options implies overwrite                         |
-+---------------------+--------------------------------------------------------+
-| --noroot            | Disable CLI nag when running as user other than root   |
-|                     | Program may fail to set permissions on files           |
 #=====================#========================================================#
 | --model \\           | Sets a field of the model passed to doT templates      |
 |     <field> <value> |                                                        |
@@ -188,7 +171,6 @@ function parseOptionalArguments(arg_list : Array<string>) : TreeployOptions|null
 			case '-h': // this must have been in a combined argument, eg -vh, so not be caught already
 				displayHelp();
 				return null;
-			case '--noroot'    : options.noroot    = true; break;
 			case '--overwrite' : options.overwrite = true; break;
 			case '--force'     : options.force     = true; break;
 
