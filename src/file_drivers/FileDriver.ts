@@ -52,21 +52,6 @@ export class FileDriver {
 	}
 
 	/**
-	 * Checks whether a path exists, this says nothing about the type of entity
-	 * at the path, eg could be a directory, file, symlink, socket, etc
-	 *
-	 * @param path - The location to check
-	 *
-	 * @return Promise which resolves to true or false, of rejects if it cannot
-	 * be determined whether the path exists
-	 */
-	exists(path : string) : Promise<Boolean>{
-		log.trace("Checking path existance: " + path);
-		return this.reader.exists(path);
-	}
-
-
-	/**
 	 * Determines if a path exists, and if so what type it is
 	 *
 	 * @param path The path to check

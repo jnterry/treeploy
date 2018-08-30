@@ -64,7 +64,6 @@ class LocalReader implements IReader {
 		});
 	}
 
-	exists      = promisify(fs.exists);
 	readdir     = promisify(fs.readdir);
 	getPathType = getPathType;
 
