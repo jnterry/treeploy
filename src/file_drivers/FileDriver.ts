@@ -6,27 +6,57 @@ import log from '../log';
 
 export { PathAttr, PathType } from './FileDriverTypes';
 
+export interface FileDriverOptions {
+	/**
+	 * If set then treeploy is permitted to overwrite existing files
+	 * with new content
+	 */
+	overwrite?     : boolean;
+
+	/**
+	 * Overwrite on steroids - if set then treeploy is permitted to take any
+	 * measures necessary to get the target's state to be as it should, in
+	 * essence this means removing files in order to write directories with the
+	 * same name, or vice-versa
+	 */
+	force?         : boolean;
+
+	/**
+	 * The root path that the file driver can operate on
+	 */
+	path           : string;
+
+	/**
+	 * Whether the driver is allowed to make modifications to the filesystem
+	 */
+	writes_enabled : boolean;
+};
+
 /**
  * Represents a set of actions that can be ran against some file system
  */
 export class FileDriver {
 
-	private reader : IReader;
-	private writer : IWriter;
+	private options : FileDriverOptions;
+	private reader  : IReader;
+	private writer  : IWriter;
 
 	/**
 	 * Creates a new FileDriver which internally uses the specified reader and
 	 * writer for all file operations
 	 *
-	 * @param IReader Implementation for file system querying functions
-	 * @param IWriter Implementation for file system modification functions
+	 * @param options  Additional options affecting the [[FileDriver]]'s behaviour
+	 * @param reader   Implementation for file system querying functions
+	 * @param writer   Implementation for file system modification functions
 	 * If set to undefined then will silently convert all write operations to
 	 * no-ops
 	 *
 	 */
-	constructor(reader : IReader,
-							writer : IWriter | undefined){
-		this.reader = reader;
+	constructor(options : FileDriverOptions,
+							reader  : IReader,
+							writer  : IWriter | undefined){
+		this.options = options;
+		this.reader  = reader;
 
 		if(writer === undefined){
 			log.info("Creating read only file driver");
@@ -93,21 +123,14 @@ export class FileDriver {
 	}
 
 	/**
-	 * Makes a directory, recursively creates any required parents and
-	 * also deletes any conflicts if a parent component of the path already
-	 * exists but as a something other than a directory
+	 * Makes a directory, recursively creating any required parents
+	 *
+	 * Obeys the options.overwrite and options.force values passed to
+	 * the constructor of this class
 	 *
 	 * @param path Path of directory to create
-	 * @param opts.force If set will overwrite parent path components which
-	 * currently exist but are not directories
-	 * @param opts.recursive If set creates non-existent parent path components
 	 */
-	async mkdir( path : string,
-							 opts : {
-								 force?     : boolean,
-								 recursive? : boolean,
-							 }
-						 ) : Promise<void> {
+	async mkdir(path : string) : Promise<void> {
 		let path_type = await this.getPathType(path);
 
 		if(path_type === PathType.Directory){
@@ -118,7 +141,7 @@ export class FileDriver {
 
 		if(path_type !== PathType.NoExist){
 			// The path component exists as a non-directory
-			if(!opts.force){
+			if(!this.options.force){
 				throw new Error("Failed to create directory: " + path +
 												" due to conflicting " + path_type.toString().toLowerCase()
 											 );
@@ -127,33 +150,26 @@ export class FileDriver {
 			await this.writer.remove(path);
 		}
 
-		await  this.mkdir(pathlib.dirname(path), opts);
+		await  this.mkdir(pathlib.dirname(path));
 		return this.writer.mkdirComponent(path);
 	}
 
 	/**
 	 * Writes a file
 	 *
+	 * Obeys the options.overwrite and options.force values passed to
+	 * the constructor of this class
+	 *
 	 * @param path    The path of the file to write
 	 * @param content The content for the file
-	 * @param options Additional options
-	 * @param options.overwrite If set then will overwrite file if it exists
-	 * @param options.force     If set then will remove a directory/symlink etc
-	 * that is at the target location and then write the file
 	 */
-	async writeFile(path : string,
-									content : string | Buffer,
-									options : {
-										overwrite? : boolean,
-										force?     : boolean,
-									}
-								 ) : Promise<void> {
+	async writeFile(path : string, content : string | Buffer) : Promise<void> {
 
 		let cur_target_type = await this.getPathType(path);
 
 		switch(cur_target_type){
 			case PathType.File:
-				if(options.overwrite){
+				if(this.options.overwrite){
 					log.info("Overwriting file: " + path);
 				} else {
 					throw new Error("Cannot write file as already exists and " +
@@ -163,7 +179,7 @@ export class FileDriver {
 				break;
 			case PathType.Directory:
 			case PathType.Other:
-				if(options.force){
+				if(this.options.force){
 					log.info("Removing conflicting " + cur_target_type +
 									 " to make way for a file at: " + path);
 					await this.writer.remove(path);
@@ -217,13 +233,14 @@ export class FileDriver {
 };
 
 export interface IFileDriverFactory {
-	create( path         : string,
-					enable_write : boolean,
-					options      : { [propIndex : string] : any }
-				) : FileDriver,
+	/**
+	 * Creates a new instance of a [[FileDriver]] of the type
+	 * supported by this factory
+	 */
+	create(options : FileDriverOptions) : FileDriver;
 
 	/**
 	 * Set of valid path strings that the file driver can handle
 	 */
-	path_regex : RegExp,
+	path_regex : RegExp;
 };

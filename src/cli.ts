@@ -74,24 +74,6 @@ async function treeploy_cli(arg_list : Array <string>){
 
 
 	/////////////////////////////////////////////////////////
-	// Check output does not exist, or if it does prompt user
-	// if they want to continue
-	if(!options.overwrite && fs.existsSync(output_path)){
-		let out_stat = fs.statSync(output_path);
-
-		console.log("The output path already exists, it, or its decendents may be overwritten");
-
-		let response = stdin.question("Continue? [y/N] ");
-		if(!response.match('[Yy]|[Yy][Ee][Ss]')){
-			return 0;
-		}
-		options.overwrite = true;
-	}
-	/////////////////////////////////////////////////////////
-
-
-
-	/////////////////////////////////////////////////////////
 	// Run treeploy
 	return treeploy(input_path, output_path, options)
 		.then(() => 0)
@@ -129,8 +111,12 @@ Options:
 |                     |   2 : above and info/debug messages                    |
 |                     |   3 : above and trace messages                         |
 #=====================#========================================================#
-| --overwrite         | Disable CLI nag when the destination path exists.      |
-|                     | The program will overwrites any conflicting paths      |
+| --overwrite         | Overwrite contents of existing files if nessacery      |
++---------------------+--------------------------------------------------------+
+| --force             | Take all measures required to make the target state be |
+|                     | as it should - for example removing a file in order to |
+|                     | create a directory of the same name, or vice-versa     |
+|                     | This options implies overwrite                         |
 +---------------------+--------------------------------------------------------+
 | --noroot            | Disable CLI nag when running as user other than root   |
 |                     | Program may fail to set permissions on files           |
@@ -204,6 +190,7 @@ function parseOptionalArguments(arg_list : Array<string>) : TreeployOptions|null
 				return null;
 			case '--noroot'    : options.noroot    = true; break;
 			case '--overwrite' : options.overwrite = true; break;
+			case '--force'     : options.force     = true; break;
 
 				// arguments with parameters
 			case '--model':

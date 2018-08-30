@@ -5,7 +5,7 @@
 import fs                                 from 'fs';
 import { promisify }                      from 'util';
 import { execFileSync }                   from 'child_process';
-import { FileDriver, IFileDriverFactory } from './FileDriver';
+import { FileDriver, FileDriverOptions, IFileDriverFactory } from './FileDriver';
 
 
 import { PathAttr, PathType, IWriter, IReader } from './FileDriverTypes';
@@ -145,21 +145,18 @@ class LocalWriter implements IWriter {
 };
 
 
-function createLocalDriver( path           : string,
-														writes_enabled : boolean,
-														options        : object
-													) : FileDriver {
-	let reader : IReader              = new LocalReader();
+function createLocalDriver(options : FileDriverOptions) : FileDriver {
+	let reader : IReader = new LocalReader();
 	let writer : IWriter | undefined;
 
-	if(writes_enabled){
+	if(options.writes_enabled){
 		writer = new LocalWriter();
 	}
 
-	return new FileDriver(reader, writer);
+	return new FileDriver(options, reader, writer);
 }
 
 export default {
 	create     : createLocalDriver,
-	path_regex : /.*/,
+	path_regex : /.*/, // :TODO: something better?
 } as IFileDriverFactory;

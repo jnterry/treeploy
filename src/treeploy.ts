@@ -1,11 +1,13 @@
 /**
- * Main file exporting the treeploy function
+ * File containing the logic of the treeployment process
+ *
+ * See Context.ts for setup of the state required for this logic
  */
 
 import yaml       from 'js-yaml';
-import dot_engine from 'dot';
 import path       from 'path';
 import fs         from 'fs';
+import dot_engine from 'dot';
 
 import { FileDriver, PathType } from './file_drivers/FileDriver'
 import FileDriverLocal          from './file_drivers/Local';
@@ -27,13 +29,11 @@ dot_engine.templateSettings = {
 	defineParams  : /.*/, // no idea what to set them to...
 };
 
-// regexes for matching different types of files
-const file_name_regex = {
-	tree_descriptor : /^tree.ya?ml(.dot)?$/,
-	skipped         : /^#.*#$|^.#|.*~$/, // emacs backup files
-	template        : /^.+\.dot$/,
-};
-
+/**
+ * Type representing the possible arguments used to create a
+ * [[TreeployContext]] - it is these that should be specified when
+ * calling treeploy's public API, and hence which must be specified on the CLI
+ */
 export class TreeployOptions {
 	/** Verbosity level to set for global [[Logger]] */
 	verbosity?  : number  = 0;
@@ -41,13 +41,28 @@ export class TreeployOptions {
 	/** The model to be passed to doT templates */
 	dot_models? : object  = { it : {}};
 
-	/** Disables CLI nag if destination exists */
+	/**
+	 * If set then treeploy is permitted to overwrite existing files
+	 * with new content
+	 */
 	overwrite?  : boolean = false;
+
+	/**
+	 * Overwrite on steroids - if set then treeploy is permitted to take any
+	 * measures necessary to get the target's state to be as it should, in
+	 * essence this means removing files in order to write directories with the
+	 * same name, or vice-versa
+	 */
+	force?      : boolean = false;
 
 	/** Disabled CLI nag if not running as root */
 	noroot?     : boolean = false;
 };
 
+/**
+ * Type representing all options and state required to carry out the
+ * treeployment process
+ */
 class TreeployContext {
 	constructor(source_path : string,
 							target_path : string,
@@ -60,7 +75,8 @@ class TreeployContext {
 
 		log.setLevel(options.verbosity || 0);
 
-		this.overwrite = options.overwrite || false;
+		this.force     = options.force || false;
+		this.overwrite = options.overwrite || options.force || false;
 
 		if(options.dot_models == null) {
 			this.dot_models = [{}]; // 1 object for single default dot variable 'it'
@@ -73,14 +89,30 @@ class TreeployContext {
 			dot_engine.templateSettings.varname = models.join(',');
 		}
 
-		this.source = FileDriverLocal.create(source_path, false, {});
-		this.target = FileDriverLocal.create(target_path,  true, {});
+		this.source = FileDriverLocal.create({
+			path: source_path,
+			writes_enabled: false,
+		});
+		this.target = FileDriverLocal.create({
+			path            : target_path,
+			writes_enabled  : true,
+			overwrite       : true,
+			force           : true,
+		});
 	}
 
 	dot_models : Array<any>;
 	overwrite  : boolean;
+	force      : boolean;
 	source     : FileDriver;
 	target     : FileDriver;
+};
+
+// regexes for matching different types of files
+const file_name_regex = {
+	tree_descriptor : /^tree.ya?ml(.dot)?$/,
+	skipped         : /^#.*#$|^.#|.*~$/, // emacs backup files
+	template        : /^.+\.dot$/,
 };
 
 /**
@@ -121,7 +153,7 @@ async function treeployDirectory(cntx        : TreeployContext,
 	if(!source_path.endsWith('/')){ source_path += '/'; }
 	if(!target_path.endsWith('/')){ target_path += '/'; }
 
-	await cntx.target.mkdir(target_path, { recursive: true, force: cntx.overwrite });
+	await cntx.target.mkdir(target_path);
 	await copyPathAttributes(cntx, source_path, target_path);
 
 	let entries = await cntx.source.readdir(source_path);
@@ -231,7 +263,7 @@ async function processDotFile(cntx        : TreeployContext,
 		source_path, template_content, cntx.dot_models
 	);
 
-	await cntx.target.writeFile(target_path, output_content, { force: cntx.overwrite });
+	await cntx.target.writeFile(target_path, output_content);
 	return copyPathAttributes(cntx, source_path, target_path);
 }
 
@@ -262,10 +294,7 @@ async function processTreeYaml(cntx            : TreeployContext,
 	let tree = yaml.safeLoad(content.toString());
 
 
-	await  cntx.target.mkdir(output_root_dir, { recursive : true,
-																							force     : cntx.overwrite
-																						}
-													);
+	await  cntx.target.mkdir(output_root_dir);
 	return buildTreeFromDescription(tree, output_root_dir);
 
 	async function buildTreeFromDescription(tree : string, output_root_dir : string){
@@ -316,21 +345,12 @@ async function processTreeYaml(cntx            : TreeployContext,
 			let path_type = await cntx.target.getPathType(target_full_path);
 
 			if(name.endsWith('/')){
-				await cntx.target.mkdir(
-					target_full_path,
-					{
-						recursive: true,
-						force: cntx.overwrite
-					}
-				);
+				await cntx.target.mkdir(target_full_path);
 			} else {
 				if(path_type === PathType.File){
 					log.debug('File already exists at: ' + target_full_path);
 				} else {
-					await cntx.target.writeFile(
-						target_full_path, '',
-						{ overwrite: false, force: false }
-					);
+					await cntx.target.writeFile(target_full_path, '');
 				}
 			}
 
@@ -365,7 +385,7 @@ async function copyFile(cntx        : TreeployContext,
 												source_path : string,
 												target_path : string){
 	let content = await cntx.source.readFile(source_path);
-	await cntx.target.writeFile(target_path, content, { overwrite: true, force: cntx.overwrite });
+	await cntx.target.writeFile(target_path, content);
 	return copyPathAttributes(cntx, source_path, target_path);
 }
 
