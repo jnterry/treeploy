@@ -75,9 +75,6 @@ class TreeployContext {
 
 		log.setLevel(options.verbosity || 0);
 
-		this.force     = options.force || false;
-		this.overwrite = options.overwrite || options.force || false;
-
 		if(options.dot_models == null) {
 			this.dot_models = [{}]; // 1 object for single default dot variable 'it'
 		} else {
@@ -96,14 +93,12 @@ class TreeployContext {
 		this.target = FileDriverLocal.create({
 			path            : target_path,
 			writes_enabled  : true,
-			overwrite       : true,
-			force           : true,
+			overwrite       : options.overwrite || options.force || false,
+			force           : options.force     || false,
 		});
 	}
 
 	dot_models : Array<any>;
-	overwrite  : boolean;
-	force      : boolean;
 	source     : FileDriver;
 	target     : FileDriver;
 };
