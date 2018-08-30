@@ -9,7 +9,7 @@ import fs         from 'fs';
 
 import { FileDriver, PathType } from './file_drivers/FileDriver'
 import FileDriverLocal          from './file_drivers/Local';
-import log                      from './log.js';
+import log                      from './log';
 
 dot_engine.templateSettings = {
   evaluate      : /\{\{([\s\S]+?)\}\}/g,

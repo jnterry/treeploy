@@ -10,7 +10,7 @@ const rewire = require('rewire');
 const fs     = require('fs');
 const execSync   = require('child_process').execSync;
 
-const FileDriverLocal = rewire('../dist/file_drivers/Local.js');
+const FileDriverLocal = rewire('../src/file_drivers/Local.ts');
 
 let getStatPermissionString = FileDriverLocal.__get__("getStatPermissionString");
 

@@ -4,8 +4,8 @@
 
 global.mockfs       = require('mock-fs');
 
-global.treeploy     = require('../dist/treeploy.js').default;
-global.treeploy_cli = require('../dist/cli.js').default;
+global.treeploy     = require('../src/treeploy.ts').default;
+global.treeploy_cli = require('../src/cli.ts').default;
 
 const chai = require('chai');
 chai.use(require('chai-as-promised'));
