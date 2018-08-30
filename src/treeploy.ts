@@ -36,36 +36,42 @@ const file_name_regex = {
 
 export class TreeployOptions {
 	/** Verbosity level to set for global [[Logger]] */
-	verbosity  : number  = 0;
+	verbosity?  : number  = 0;
 
 	/** The model to be passed to doT templates */
-	dot_models : object  = { it : {}};
+	dot_models? : object  = { it : {}};
 
 	/** Disables CLI nag if destination exists */
-	overwrite  : boolean = false;
+	overwrite?  : boolean = false;
 
 	/** Disabled CLI nag if not running as root */
-	noroot     : boolean = false;
+	noroot?     : boolean = false;
 };
 
 class TreeployContext {
 	constructor(source_path : string,
 							target_path : string,
-							options     : TreeployOptions
+							options     : TreeployOptions | null
 						 ){
+
 		if(options == null){
-			options = new TreeployOptions;
+			options = new TreeployOptions();
 		}
 
-		log.setLevel(options.verbosity);
-		this.overwrite = options.overwrite;
+		log.setLevel(options.verbosity || 0);
 
-		// we need to guarentee that the dot_engine.varname order matches up
-		// with the order of parameters we pass to templates, convert everything
-		// to an array here and use that from now on
-		let models = Object.keys(options.dot_models);
-		this.dot_models = models.map((x : string) => (<any>options).dot_models[x] );
-		dot_engine.templateSettings.varname = models.join(',');
+		this.overwrite = options.overwrite || false;
+
+		if(options.dot_models == null) {
+			this.dot_models = [{}]; // 1 object for single default dot variable 'it'
+		} else {
+			// we need to guarentee that the dot_engine.varname order matches up
+			// with the order of parameters we pass to templates, convert everything
+			// to an array here and use that from now on
+			let models = Object.keys(options.dot_models);
+			this.dot_models = models.map((x : string) => (<any>options).dot_models[x] );
+			dot_engine.templateSettings.varname = models.join(',');
+		}
 
 		this.source = FileDriverLocal.create(source_path, false, {});
 		this.target = FileDriverLocal.create(target_path,  true, {});
@@ -88,7 +94,7 @@ class TreeployContext {
  */
 async function treeploy(source_path : string,
 												target_path : string,
-												options     : TreeployOptions){
+												options     : TreeployOptions) : Promise<void>{
 
 	let cntx = new TreeployContext(source_path, target_path, options);
 
@@ -108,14 +114,14 @@ async function treeploy(source_path : string,
 
 async function treeployDirectory(cntx        : TreeployContext,
 																 source_path : string,
-																 target_path : string){
+																 target_path : string) : Promise<void>{
 
 	log.trace('Processing source directory: ' + source_path);
 
 	if(!source_path.endsWith('/')){ source_path += '/'; }
 	if(!target_path.endsWith('/')){ target_path += '/'; }
 
-	await cntx.target.mkdir(target_path, { recursive: true, overwrite: cntx.overwrite });
+	await cntx.target.mkdir(target_path, { recursive: true, force: cntx.overwrite });
 	await copyPathAttributes(cntx, source_path, target_path);
 
 	let entries = await cntx.source.readdir(source_path);
@@ -148,18 +154,18 @@ async function treeployDirectory(cntx        : TreeployContext,
 		await treeployFile(cntx, source_path + x, target_path + x);
 	}
 
-	return true;
+	return;
 }
 
 async function treeployFile(cntx        : TreeployContext,
 														source_path : string,
-														target_path : string){
+														target_path : string) : Promise<void>{
 
 	let file_name = path.basename(source_path);
 
 	if(file_name.match(file_name_regex.skipped)){
 		log.info("Skipping file which matches skip regex: " + source_path);
-		return false;
+		return;
 	}
 
 	if (file_name.match(file_name_regex.tree_descriptor)){
@@ -225,7 +231,7 @@ async function processDotFile(cntx        : TreeployContext,
 		source_path, template_content, cntx.dot_models
 	);
 
-	await cntx.target.writeFile(target_path, output_content);
+	await cntx.target.writeFile(target_path, output_content, { force: cntx.overwrite });
 	return copyPathAttributes(cntx, source_path, target_path);
 }
 
@@ -256,8 +262,8 @@ async function processTreeYaml(cntx            : TreeployContext,
 	let tree = yaml.safeLoad(content.toString());
 
 
-	await  cntx.target.mkdir(output_root_dir, { recursive: true,
-																							overwrite: cntx.overwrite
+	await  cntx.target.mkdir(output_root_dir, { recursive : true,
+																							force     : cntx.overwrite
 																						}
 													);
 	return buildTreeFromDescription(tree, output_root_dir);
@@ -310,26 +316,21 @@ async function processTreeYaml(cntx            : TreeployContext,
 			let path_type = await cntx.target.getPathType(target_full_path);
 
 			if(name.endsWith('/')){
-				await cntx.target.mkdir(target_full_path, { recursive: true, overwrite: cntx.overwrite });
+				await cntx.target.mkdir(
+					target_full_path,
+					{
+						recursive: true,
+						force: cntx.overwrite
+					}
+				);
 			} else {
-
-				switch(path_type){
-					case PathType.Directory:
-					case PathType.Other:
-						if(cntx.overwrite){
-							log.info("Overwritting existing non-file with file: " + target_full_path);
-							await cntx.target.remove   (target_full_path);
-							await cntx.target.writeFile(target_full_path, '');
-						} else {
-							throw new Error("Conflicting non-file found at target: " + target_full_path);
-						}
-						break;
-					case PathType.File:
-						log.debug("Not overwriting existing file: " + target_full_path);
-						break;
-					case PathType.NoExist:
-						await cntx.target.writeFile(target_full_path, '');
-						break;
+				if(path_type === PathType.File){
+					log.debug('File already exists at: ' + target_full_path);
+				} else {
+					await cntx.target.writeFile(
+						target_full_path, '',
+						{ overwrite: false, force: false }
+					);
 				}
 			}
 
@@ -364,7 +365,7 @@ async function copyFile(cntx        : TreeployContext,
 												source_path : string,
 												target_path : string){
 	let content = await cntx.source.readFile(source_path);
-	await cntx.target.writeFile(target_path, content);
+	await cntx.target.writeFile(target_path, content, { overwrite: true, force: cntx.overwrite });
 	return copyPathAttributes(cntx, source_path, target_path);
 }
 

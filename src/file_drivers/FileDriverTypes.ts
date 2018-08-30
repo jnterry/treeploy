@@ -22,16 +22,16 @@ export interface PathAttr {
 /** Enumeration of the types of file system entities */
 export enum PathType {
 	/** The path does not exist */
-	NoExist,
+	NoExist = 0, // 0 so evaluates to false if tested
 
 	/** The path exists and is a file */
-	File,
+	File = "file",
 
 	/** The path exists and is a directory */
-	Directory,
+	Directory = "directory",
 
 	/** The path exists but is not one of the types listed above */
-	Other,
+	Other = "unknown filesystem entity",
 };
 
 

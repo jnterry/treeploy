@@ -98,13 +98,13 @@ export class FileDriver {
 	 * exists but as a something other than a directory
 	 *
 	 * @param path Path of directory to create
-	 * @param opts.overwrite If set will overwrite parent path components which
+	 * @param opts.force If set will overwrite parent path components which
 	 * currently exist but are not directories
 	 * @param opts.recursive If set creates non-existent parent path components
 	 */
 	async mkdir( path : string,
 							 opts : {
-								 overwrite? : boolean,
+								 force?     : boolean,
 								 recursive? : boolean,
 							 }
 						 ) : Promise<void> {
@@ -118,7 +118,7 @@ export class FileDriver {
 
 		if(path_type !== PathType.NoExist){
 			// The path component exists as a non-directory
-			if(!opts.overwrite){
+			if(!opts.force){
 				throw new Error("Failed to create directory: " + path +
 												" due to conflicting " + path_type.toString().toLowerCase()
 											 );
@@ -136,8 +136,49 @@ export class FileDriver {
 	 *
 	 * @param path    The path of the file to write
 	 * @param content The content for the file
+	 * @param options Additional options
+	 * @param options.overwrite If set then will overwrite file if it exists
+	 * @param options.force     If set then will remove a directory/symlink etc
+	 * that is at the target location and then write the file
 	 */
-	writeFile(path : string, content : string | Buffer) : Promise<void> {
+	async writeFile(path : string,
+									content : string | Buffer,
+									options : {
+										overwrite? : boolean,
+										force?     : boolean,
+									}
+								 ) : Promise<void> {
+
+		let cur_target_type = await this.getPathType(path);
+
+		switch(cur_target_type){
+			case PathType.File:
+				if(options.overwrite){
+					log.info("Overwriting file: " + path);
+				} else {
+					throw new Error("Cannot write file as already exists and " +
+													"--overwrite flag is not set: " + path
+												 );
+				}
+				break;
+			case PathType.Directory:
+			case PathType.Other:
+				if(options.force){
+					log.info("Removing conflicting " + cur_target_type +
+									 " to make way for a file at: " + path);
+					await this.writer.remove(path);
+				} else {
+					throw new Error("Cannot write file as there exists a non-file at the " +
+													"target path and --force flag is not set: " + path
+												 );
+				}
+				break;
+			case PathType.NoExist:
+				break;
+			default:
+				throw new Error("Internal programming error - missing case statement");
+		}
+
 		log.debug("Writing file: " + path);
 		return this.writer.writeFile(path, content);
 	}

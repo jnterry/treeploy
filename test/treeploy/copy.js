@@ -121,12 +121,8 @@ it('Conflicting file blocking directory is not overwritten without overwrite fla
 	fs.mkdirSync('target');
 	fs.writeFileSync('target/dir_a', 'I\'m a conflict');
 
-	return treeploy('source', 'target')
-		.then((exit_code) => {
-			expect(exit_code).is.not.deep.equal(0);
-			expect(fs.readFileSync('target/dir_a').toString()).is.deep.equal('I\'m a conflict');
-			assertDirectoryCorrect('target');
-		});
+	expect(treeploy('source', 'target')).is.rejected;
+	expect(fs.readFileSync('target/dir_a').toString()).is.deep.equal('I\'m a conflict');
 });
 
 it('Conflicting file blocking directory IS overwritten with overwrite flag', () => {
@@ -134,8 +130,7 @@ it('Conflicting file blocking directory IS overwritten with overwrite flag', () 
 	fs.writeFileSync('target/dir_a', 'I\'m a conflict');
 
 	return treeploy('source', 'target', { overwrite: true })
-		.then((exit_code) => {
-			expect(exit_code).is.deep.equal(0);
+		.then(() => {
 			assertDirectoryCorrect('target');
 		});
 });
@@ -144,11 +139,8 @@ it('Conflicting directory blocking file is not overwritten without overwrite fla
 	fs.mkdirSync('target');
 	fs.mkdirSync('target/hello.txt');
 
-	return treeploy('source', 'target')
-		.then((exit_code) => {
-			expect(exit_code).is.not.deep.equal(0);
-			expect(fs.statSync('target/hello.txt').isDirectory()).is.true;
-		});
+	expect(treeploy('source', 'target')).is.rejected;
+	expect(fs.statSync('target/hello.txt').isDirectory()).is.true;
 });
 
 it('Conflicting file blocking directory IS overwritten with overwrite flag', () => {
@@ -156,8 +148,7 @@ it('Conflicting file blocking directory IS overwritten with overwrite flag', () 
 	fs.mkdirSync('target/hello.txt');
 
 	return treeploy('source', 'target', { overwrite: true })
-		.then((exit_code) => {
-			expect(exit_code).is.deep.equal(0);
+		.then(() => {
 			assertDirectoryCorrect('target');
 		});
 });

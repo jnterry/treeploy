@@ -197,7 +197,7 @@ function parseOptionalArguments(arg_list : Array<string>) : TreeployOptions|null
 		switch(arg_list[i]){
 			case '-v':
 			case '--verbose':
-				++options.verbosity;
+				++options.verbosity!;
 				break;
 			case '-h': // this must have been in a combined argument, eg -vh, so not be caught already
 				displayHelp();
