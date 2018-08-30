@@ -44,5 +44,21 @@
 		"source-map-support": "0.5.9",
 		"rewire": "4.0.1",
 		"ts-node": "7.0.1"
+	},
+	"nyc": {
+		"extension": [
+			".ts"
+		],
+		"include": [
+			"src/**/*"
+		],
+		"exclude": [
+			"**/*.d.ts"
+		],
+		"all": true,
+		"require": [
+			"ts-node/register",
+			"source-map-support/register"
+		]
 	}
 }
