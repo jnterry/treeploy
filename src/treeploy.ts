@@ -28,9 +28,14 @@ dot_engine.templateSettings = {
 	defineParams  : /.*/, // no idea what to set them to...
 };
 
+
+import FileDriverSsh2  from './file_drivers/Ssh2';
+import FileDriverLocal from './file_drivers/Local';
+// List of file drivers to try and automatically select from, they are
+// tried in order from top to bottom
 let driver_factories = [
-	require('./file_drivers/Ssh2.ts').default,
-	require('./file_drivers/Local.ts').default,
+	FileDriverSsh2,
+	FileDriverLocal,
 ];
 
 /**
@@ -120,6 +125,7 @@ async function createTreeployContext(source_path : string,
 				overwrite       : options.overwrite || options.force || false,
 				force           : options.force     || false,
 			});
+			break;
 		}
 	}
 	if(result.target == null){
