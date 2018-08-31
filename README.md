@@ -118,3 +118,53 @@ Each entry may also have the fields:
 - **owner** - string or number representing user name or uid of the entry's owner
 - **group** - string or number representing group name or gid of the entry's group
 - **mode**  - String of the form '0xxx' representing the unix file permissions
+
+# File Drivers
+
+Treeploy supports the concept of different "file drivers" for interacting with file systems of different types, for example, the local file system of the machine running treeploy, vs the file system of a remote server.
+
+Points to note:
+
+- The appropriate driver will be automatically selected based on the source and target paths specified - for example ```/dir``` will use the local driver, where as ```user@example.com:/dir``` will use the ssh2 driver
+- It is not necessary for either the source or the target to use the local driver, it is possible for machine A to run treeploy, to deploy a template from machine B to machine C using the ssh2 driver for both the source and target
+- Optional parameters can be passed to drivers using the command line arguments ```--sourcedriver field.name value``` or ```--targetdriver field.name value```.
+
+Below is an outline of the available file drivers and their associated optional parameters:
+
+<table>
+
+<thead>
+<tr>
+<th>Driver Name</th>
+<th>Path Format</th>
+<th>Arguments</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td>local</td>
+<td>/path/to/dir<br/>./../relative/path</td>
+<td>
+<ul>
+<li>No optional arguments accepted</li>
+</ul>
+</td>
+</tr>
+
+
+<tr>
+<td>ssh2</td>
+<td>username@example.com:/path<br/>192.168.0.50:~/path</td>
+<td>
+<ul>
+<li><b>use_sudo</b> - If specified then the driver will attempt to escalate to root using the 'sudo' command on the remote machine. This is useful if the remote machine does not permit root login. In order for this to work 'sudo' must be in the remote user's path, and the user must be setup for passwordless use of sudo</li>
+<li><b>agent_socket</b> - Path to the unix socket for the ssh-agent on the local machine used to authenticate. If not specified then defaults to the value of the environment variable SSH_AUTH_SOCK. In most cases this is probably what you want, as on a standard linux distribution this will use the key in ~/.ssh/id_rsa (and any others added to your ssh-agent)</li>
+<li><b>key_file</b> - Path to a file containing the private key used to authenticate with the remote server</li>
+<li><b>key_string</b> - String containing the private key used to authenticate with the remote server</li>
+<li><b>password</b> - The password to login to the remote server with</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
