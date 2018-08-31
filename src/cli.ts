@@ -208,7 +208,7 @@ function parseOptionalArguments(arg_list : Array<string>) : TreeployOptions|null
 				}
 				if(value == null || value.startsWith('-')){
 					throw new Error("Expected <value> to be specified for flag " +
-													flag + ", got: " + field
+													flag + ", got: " + value
 												 );
 				}
 
