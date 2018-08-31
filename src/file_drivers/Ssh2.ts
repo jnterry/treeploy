@@ -1,5 +1,27 @@
 /**
  * Exports a file driver which manipulates a remote file system over SSH2
+ *
+ * Note that this driver actually runs shell commands, rather than starting a
+ * SFTP session over the SSH connection in order to manipulate the file system
+ *
+ * This is because we want to support the use case where we login as user A,
+ * and then use sudo privledges to make changes to root owned parts of the
+ * file system, or set file owners, etc. This is not possible using SFTP unless
+ * you log in as root as you cannot somehow start the session as sudo, and you
+ * cannot use sudo within SFTP. However we don't want to have to force root
+ * logins as some servers may not permit root login
+ *
+ * See:
+ * - https://github.com/mscdex/ssh2/issues/287
+ * - https://github.com/mscdex/ssh2/issues/626
+ *
+ * If we ever want to support file streams with this method rather than
+ * reading/writing entire contents at once we would have to use tee/cat
+ * commands as per: https://github.com/mscdex/ssh2/issues/626#issuecomment-337250142
+ *
+ * Note that the user we log in as MUST be setup as being able to use sudo
+ * without a password in order for this to work
+ *
  */
 
 import { promisify }      from 'util';
@@ -111,9 +133,6 @@ class Ssh2Writer extends Ssh2Reader implements IWriter {
 	}
 
 	async writeFile(path : string, content : String | Buffer) : Promise<void>{
-		// If we ever needed to support write streams can theoretically emulate with tee:
-		// https://github.com/mscdex/ssh2/issues/626#issuecomment-337250142
-		// -> not sure if node-ssh (wrapper around ssh2) supports streams very well though...
 		return this
 			.execCmdMaybeSudo(['echo', content.toString(), '>', path])
 			.then((result) => {
