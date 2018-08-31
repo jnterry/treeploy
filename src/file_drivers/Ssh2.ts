@@ -24,13 +24,19 @@ class Ssh2Reader implements IReader {
 	}
 
 	protected async execCmdMaybeSudo(cmd : Array<string>) : Promise<SSH.ExecCommandResult>{
-		if(this.use_sudo){ cmd.unshift('sudo'); }
-
-		return this.client.execCommand(cmd.join(' '), {});
+		if(this.use_sudo){
+			// We can't just stick sudo in front of the command as it may contains
+			// pipes etc, and we want to run the whole thing as root, not just the
+			// first part
+			return this.client.execCommand(
+				"sudo /bin/sh -c '" + cmd.join(' ').replace("'", "/'") + "'"
+			);
+		} else {
+			return this.client.execCommand(cmd.join(' '), {});
+		}
 	}
 
 	async readFile(path : string) : Promise<Buffer> {
-		console.log("Reading file: " + path);
 		return this
 			.execCmdMaybeSudo(['cat', path])
 			.then((result) => {
