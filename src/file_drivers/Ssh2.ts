@@ -24,7 +24,6 @@
  *
  */
 
-import { promisify }      from 'util';
 import os                 from 'os';
 
 import * as SSH from 'node-ssh';
@@ -243,18 +242,24 @@ function parseSshTarget(path: string) : SshTarget {
 }
 
 
-function createSsh2Driver(options : FileDriverOptions) : Promise<FileDriver> {
+async function createSsh2Driver(options : FileDriverOptions) : Promise<FileDriver> {
 
 	let ssh_target = parseSshTarget(options.path);
 
 	let client = new NodeSsh();
 
+	if(options.driver.key_file != null && options.driver.key_string != null){
+		throw new Error("Cannot specifiy both key_file and key_string simultaniously");
+	}
+
 	return client
 		.connect({
-			host     : ssh_target.hostname,
-			port     : 22, // :TODO: support non-standard ports
-			username : ssh_target.username,
-			agent    : process.env['SSH_AUTH_SOCK'],
+			host       : ssh_target.hostname,
+			port       : 22, // :TODO: support non-standard ports
+			username   : ssh_target.username,
+			agent      : options.driver.agent_socket || process.env['SSH_AUTH_SOCK'],
+			password   : options.driver.password != null ? options.driver.password.toString() : undefined,
+			privateKey : options.driver.key_file || options.driver.key_string // node-ssh will automatically load the file if its a path
 		}).catch((err : any) => {
 			throw new Error("Failed to connect to " + ssh_target.username + "@"
 											+ ssh_target.hostname + ": " + err.message
