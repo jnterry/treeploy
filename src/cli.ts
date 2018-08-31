@@ -179,7 +179,7 @@ function parseOptionalArguments(arg_list : Array<string>) : TreeployOptions|null
 				displayHelp();
 				return null;
 			case '-n':
-			case '-noop':
+			case '--noop':
 			case '--no-action':
 			case '--dryrun':
 				options.dryrun      = true;

@@ -32,5 +32,6 @@ describe('all', () => {
 		importTest('cli/modelfile');
 		importTest('cli/modelcmd');
 		importTest('cli/model_overwrites');
+		importTest('cli/dryrun');
 	});
 });
