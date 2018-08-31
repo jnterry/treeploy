@@ -250,7 +250,7 @@ function createSsh2Driver(options : FileDriverOptions) : Promise<FileDriver> {
 				use_sudo = true;
 			}
 
-			if(options.writes_enabled){
+			if(!options.writes_enabled){
 				let reader = new Ssh2Reader(client, use_sudo);
 				return new FileDriver(options, ssh_target.path, reader, undefined);
 			} else {
