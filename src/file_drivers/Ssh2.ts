@@ -13,6 +13,14 @@ import log                                                   from './../log';
 
 class Ssh2Reader implements IReader {
 
+	private client   : any;
+	private use_sudo : boolean;
+
+	constructor(client : any, use_sudo : boolean){
+		this.client   = client;
+		this.use_sudo = use_sudo;
+	}
+
 	async readFile(path : string) : Promise<Buffer> {
 		return Buffer.from([]);
 	}
@@ -30,7 +38,11 @@ class Ssh2Reader implements IReader {
 	};
 };
 
-class Ssh2Writer implements IWriter {
+class Ssh2Writer extends Ssh2Reader implements IWriter {
+	constructor(client : any, use_sudo : boolean){
+		super(client, use_sudo);
+	}
+
 	async writeFile(path : string, content : String | Buffer) : Promise<void>{
 		return;
 	}
@@ -110,14 +122,18 @@ function createSsh2Driver(options : FileDriverOptions) : Promise<FileDriver> {
 							 " established as user: " + ssh_target.username
 							);
 
-			let reader : IReader = new Ssh2Reader();
-			let writer : IWriter | undefined;
-
-			if(options.writes_enabled){
-				writer = new Ssh2Writer();
+			let use_sudo = false;
+			if(options.driver != null && options.driver.use_sudo){
+				use_sudo = true;
 			}
 
-			return new FileDriver(options, reader, writer);
+			if(options.writes_enabled){
+				let reader = new Ssh2Reader(client, use_sudo);
+				return new FileDriver(options, reader, undefined);
+			} else {
+				let writer = new  Ssh2Writer(client, use_sudo);
+				return new FileDriver(options, writer, writer);
+			}
 		});
 }
 

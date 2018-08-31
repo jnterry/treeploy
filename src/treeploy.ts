@@ -108,6 +108,10 @@ async function createTreeployContext(source_path : string,
 			result.source = await df.create({
 				path: source_path,
 				writes_enabled: false,
+				driver : {
+					nane     : df.name,
+					use_sudo : true, // :TODO: read from CLI
+				},
 			});
 			break;
 		}
@@ -124,6 +128,10 @@ async function createTreeployContext(source_path : string,
 				writes_enabled  : !options.dryrun,
 				overwrite       : options.overwrite || options.force || false,
 				force           : options.force     || false,
+				driver : {
+					nane     : df.name,
+					use_sudo : true, // :TODO: read from CLI
+				},
 			});
 			break;
 		}

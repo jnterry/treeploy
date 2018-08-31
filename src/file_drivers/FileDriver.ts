@@ -30,6 +30,13 @@ export interface FileDriverOptions {
 	 * Whether the driver is allowed to make modifications to the filesystem
 	 */
 	writes_enabled : boolean;
+
+	/** Driver specific option to be used by the IFileDriverFactory */
+	driver : {
+		// Which options are required depends entirely on the driver in use
+		[key: string] : any,
+	};
+
 };
 
 /**
