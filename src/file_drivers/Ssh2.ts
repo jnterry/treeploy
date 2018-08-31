@@ -5,7 +5,9 @@
 import { promisify }      from 'util';
 import os                 from 'os';
 
-const NodeSsh = require('node-ssh');
+import SSH from 'node-ssh';
+const NodeSsh = require('node-ssh') as SSH;
+
 
 import { FileDriver, FileDriverOptions, IFileDriverFactory } from './FileDriver';
 import { PathAttr, PathType, IWriter, IReader }              from './FileDriverTypes';
@@ -22,6 +24,7 @@ class Ssh2Reader implements IReader {
 	}
 
 	async readFile(path : string) : Promise<Buffer> {
+		return this.client.exec
 		return Buffer.from([]);
 	}
 
