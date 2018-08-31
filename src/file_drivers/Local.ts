@@ -153,7 +153,7 @@ async function createLocalDriver(options : FileDriverOptions) : Promise<FileDriv
 		writer = new LocalWriter();
 	}
 
-	return new FileDriver(options, reader, writer);
+	return new FileDriver(options, options.path, reader, writer);
 }
 
 export default {

@@ -165,6 +165,15 @@ async function treeploy(source_path : string,
 
 	let cntx = await createTreeployContext(source_path, target_path, options);
 
+	// update paths to the root path handled by the file driver, hence ensuring
+	// that the file driver can cope with anything we pass it relative to the
+	// source or target path
+	// (eg, source path might be user@host:/path, but the ssh2 driver wants paths
+	// of the format /path/test.txt, so it rewrites the source path to be /path
+	// rather than the full user@host:/path)
+	source_path = cntx.source.getRootPath();
+	target_path = cntx.target.getRootPath();
+
 	let path_type = await cntx.source.getPathType(source_path);
 
 	switch(path_type){

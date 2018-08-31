@@ -246,10 +246,10 @@ function createSsh2Driver(options : FileDriverOptions) : Promise<FileDriver> {
 
 			if(options.writes_enabled){
 				let reader = new Ssh2Reader(client, use_sudo);
-				return new FileDriver(options, reader, undefined);
+				return new FileDriver(options, ssh_target.path, reader, undefined);
 			} else {
 				let writer = new  Ssh2Writer(client, use_sudo);
-				return new FileDriver(options, writer, writer);
+				return new FileDriver(options, ssh_target.path, writer, writer);
 			}
 		});
 }

@@ -44,26 +44,32 @@ export interface FileDriverOptions {
  */
 export class FileDriver {
 
-	private options : FileDriverOptions;
-	private reader  : IReader;
-	private writer  : IWriter;
+	private options   : FileDriverOptions;
+	private reader    : IReader;
+	private writer    : IWriter;
+	private root_path : string;
 
 	/**
 	 * Creates a new FileDriver which internally uses the specified reader and
 	 * writer for all file operations
 	 *
-	 * @param options  Additional options affecting the [[FileDriver]]'s behaviour
-	 * @param reader   Implementation for file system querying functions
-	 * @param writer   Implementation for file system modification functions
+	 * @param options   Additional options affecting the [[FileDriver]]'s behaviour
+	 * @param root_path The root path that the file driver is set to operate on
+	 * @param reader    Implementation for file system querying functions
+	 * @param writer    Implementation for file system modification functions
 	 * If set to undefined then will silently convert all write operations to
 	 * no-ops
 	 *
 	 */
-	constructor(options : FileDriverOptions,
-							reader  : IReader,
-							writer  : IWriter | undefined){
-		this.options = options;
-		this.reader  = reader;
+	constructor(options   : FileDriverOptions,
+							root_path : string,
+							reader    : IReader,
+							writer    : IWriter | undefined){
+		log.warn("Creating driver for: " + root_path + " as read only");
+
+		this.options   = options;
+		this.reader    = reader;
+		this.root_path = root_path;
 
 		if(writer === undefined){
 			this.writer = {
@@ -76,6 +82,8 @@ export class FileDriver {
 			this.writer = writer;
 		}
 	}
+
+	getRootPath() : string { return this.root_path; }
 
 	/**
 	 * Reads the contents of a file at some location
