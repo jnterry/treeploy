@@ -3,12 +3,14 @@
  * https://github.com/steelbrain/node-ssh/blob/v5.1.2/README.md#api
  */
 
-declare module 'node-ssh' {
+declare module 'node-ssh'{
+
 	export interface PutFilesOptions {
 		sftp? :object;
 		sftpOptions?: object;
 		concurrency?: number;
 	}
+
 	export interface PutDirectoryOptions {
 		sftp? :object;
 		sftpOptions?: object;
@@ -17,6 +19,7 @@ declare module 'node-ssh' {
 		tick?: ((localPath: string, remotePath: string, error? :Error) => void);
 		validate?: ((localPath: string) => boolean);
 	}
+
 	export interface  ExecOptions {
 		cwd?: string;
 		options?: object;
@@ -26,6 +29,14 @@ declare module 'node-ssh' {
 		onStderr?: ((chunk: Buffer) => void);
 	}
 
+	export interface ExecCommandResult {
+		stdout   : string;
+		options? : object;
+		stderr   : string;
+		signal?  : string;
+		code     : number;
+	}
+
 	export interface SSH {
 		new() : SSH;
 		connect(config: object): Promise<this>;
@@ -33,7 +44,7 @@ declare module 'node-ssh' {
 		requestShell(): Promise<any>;
 		mkdir(path: string, method: 'sftp' | 'exec', givenSftp?: object): Promise<string>;
 		exec(command: string, parameters: Array<string>, options: ExecOptions): Promise<object | string>;
-		execCommand(command: string, options: { cwd: string, stdin: string }): Promise<{ stdout: string, options?: object, stderr: string, signal? :string, code: number }>;
+		execCommand(command: string, options: { cwd: string, stdin: string }): Promise<ExecCommandResult>;
 		putFile(localFile: string, remoteFile: string, sftp?: object, opts?: object): Promise<void>;
 		getFile(localFile: string, remoteFile: string, sftp?: object, opts?: object): Promise<void>;
 		putFiles(files: Array<{ local: string, remote: string }>, options: PutFilesOptions): Promise<void>;
@@ -42,4 +53,5 @@ declare module 'node-ssh' {
 	}
 
 	export default SSH;
+
 }

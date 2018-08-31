@@ -5,8 +5,8 @@
 import { promisify }      from 'util';
 import os                 from 'os';
 
-import SSH from 'node-ssh';
-const NodeSsh = require('node-ssh') as SSH;
+import * as SSH from 'node-ssh';
+const NodeSsh = require('node-ssh') as SSH.SSH;
 
 
 import { FileDriver, FileDriverOptions, IFileDriverFactory } from './FileDriver';
@@ -23,21 +23,79 @@ class Ssh2Reader implements IReader {
 		this.use_sudo = use_sudo;
 	}
 
+	protected async execCmdMaybeSudo(cmd : Array<string>) : Promise<SSH.ExecCommandResult>{
+		if(this.use_sudo){ cmd.unshift('sudo'); }
+
+		return this.client.execCommand(cmd.join(' '), {});
+	}
+
 	async readFile(path : string) : Promise<Buffer> {
-		return this.client.exec
-		return Buffer.from([]);
+		console.log("Reading file: " + path);
+		return this
+			.execCmdMaybeSudo(['cat', path])
+			.then((result) => {
+				if(result.code === 0){
+					return Buffer.from(result.stdout);
+				} else {
+					throw new Error("Failed to read file '" + path +
+													"': " + result.stderr
+												 );
+				}
+			});
 	}
 
 	async readdir(path : string) : Promise<any[]> {
-		return [];
+		return this
+			.execCmdMaybeSudo(['ls', path, '-a'])
+			.then((result) => {
+				return result.stdout
+					.split('\n')
+					.filter((x) => x !== '.' && x !== '..');
+			});
 	}
 
 	async getPathType(path : string) : Promise<PathType> {
-		return PathType.File;
+		return this.
+			execCmdMaybeSudo(['stat', path, '--format="%F"'])
+			.then((result) => {
+				if(result.code === 0){
+					// then path exists, and we've stat-ed it
+					switch(result.stdout){
+						case 'directory'    : return PathType.Directory;
+						case 'regular file' : return PathType.File;
+						default:              return PathType.Other;
+					}
+				} else {
+					// we have no way of determining if the path does not exist, or if we
+					// just don't have permission to see it
+					return PathType.NoExist;
+				}
+			});
 	}
 
 	async getAttributes(path : string) : Promise<PathAttr> {
-		return {} as PathAttr;
+		return this
+			.execCmdMaybeSudo(['stat', path, '--format="%u|%g|%f"'])
+			.then((result) => {
+				if(result.code !== 0){
+					throw new Error("Failed to determine attributes for: "
+													+ path + ": " + result.stderr
+												 );
+				} else {
+					let parts = result.stdout.split("|");
+					if(parts.length !== 3){
+						throw new Error("Failed to determine attributes for: " +
+														path + ": Remote stat result was of invalid format"
+													 );
+					} else {
+						return {
+							owner : parseInt(parts[0]),
+							group : parseInt(parts[1]),
+							mode  : '0' + (parseInt(parts[2], 16) & parseInt('777', 8)).toString(8),
+						};
+					}
+				}
+			});
 	};
 };
 
