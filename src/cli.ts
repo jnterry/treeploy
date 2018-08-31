@@ -103,6 +103,12 @@ Options:
 |                     | as it should - for example removing a file in order to |
 |                     | create a directory of the same name, or vice-versa     |
 |                     | This options implies overwrite                         |
++---------------------+--------------------------------------------------------+
+| -n, --noop          | Prevents any modifications being made to file system.  |
+| --no-action         | Best used with -v to see what is going on
+| --dryrun            | Note --overwrite and --force change what actions would |
+|                     | be taken and thus affect logged output, however even   |
+|                     | with those flags no actions will actually be taken     |
 #=====================#========================================================#
 | --model \\           | Sets a field of the model passed to doT templates      |
 |     <field> <value> |                                                        |
@@ -171,6 +177,12 @@ function parseOptionalArguments(arg_list : Array<string>) : TreeployOptions|null
 			case '-h': // this must have been in a combined argument, eg -vh, so not be caught already
 				displayHelp();
 				return null;
+			case '-n':
+			case '--noop':
+			case '--no-action':
+			case '--dryrun':
+				options.dryrun      = true;
+				break;
 			case '--overwrite' : options.overwrite = true; break;
 			case '--force'     : options.force     = true; break;
 

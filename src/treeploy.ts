@@ -55,8 +55,8 @@ export class TreeployOptions {
 	 */
 	force?      : boolean = false;
 
-	/** Disabled CLI nag if not running as root */
-	noroot?     : boolean = false;
+	/** If set then no file system modifications will be made */
+	dryrun?     : boolean = false;
 };
 
 /**
@@ -92,7 +92,7 @@ class TreeployContext {
 		});
 		this.target = FileDriverLocal.create({
 			path            : target_path,
-			writes_enabled  : true,
+			writes_enabled  : !options.dryrun,
 			overwrite       : options.overwrite || options.force || false,
 			force           : options.force     || false,
 		});
