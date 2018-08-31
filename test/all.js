@@ -17,6 +17,7 @@ function importTest(file_path){
 
 describe('all', () => {
 	describe('file_drivers', () => {
+		importTest('file_drivers/path_regex');
 		importTest('file_drivers/local');
 	});
 

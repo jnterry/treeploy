@@ -158,5 +158,5 @@ function createLocalDriver(options : FileDriverOptions) : FileDriver {
 
 export default {
 	create     : createLocalDriver,
-	path_regex : /.*/, // :TODO: something better?
+	path_regex : /.+/,
 } as IFileDriverFactory;
