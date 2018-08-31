@@ -16,7 +16,9 @@ function importTest(file_path){
 }
 
 describe('all', () => {
-	importTest('FileDriverLocal');
+	describe('file_drivers', () => {
+		importTest('file_drivers/local');
+	});
 
 	describe('treeploy', () => {
 		importTest('treeploy/copy');

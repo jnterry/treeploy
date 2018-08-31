@@ -4,13 +4,13 @@
 
 "use strict";
 
-require('./common.js');
+require('../common.js');
 
 const rewire = require('rewire');
 const fs     = require('fs');
 const execSync   = require('child_process').execSync;
 
-const FileDriverLocal = rewire('../src/file_drivers/Local.ts');
+const FileDriverLocal = rewire('../../src/file_drivers/Local.ts');
 
 let getStatPermissionString = FileDriverLocal.__get__("getStatPermissionString");
 
