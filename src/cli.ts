@@ -134,6 +134,12 @@ Options:
 | --modelcmd <cmd>    | Example: --modelcmd host.ip \\                          |
 |                     |             'curl "https://api.ipify.org?format=json"' |
 #=====================#=========================================================
+| --sourcedriver \    | Sets an optional argument for the FileDriver to use    |
+|     <field> <value> | for the source path                                    |
+|---------------------|-------------------------------------------------------- |
+| --targetdriver \    | Sets an optional argument for the FileDriver to use    |
+|     <field> <value> | for the target path                                    |
+#=====================#=========================================================
 | -h, --help          | Display this help infomation                           |
 #=====================#=========================================================
 `);
@@ -186,17 +192,53 @@ function parseOptionalArguments(arg_list : Array<string>) : TreeployOptions|null
 			case '--overwrite' : options.overwrite = true; break;
 			case '--force'     : options.force     = true; break;
 
-				// arguments with parameters
+			// arguments with 2 parameters, both of which are required
 			case '--model':
-			case '--modelfile' :
-			case '--modelcmd':
-				let arg   = arg_list[i+0];
+			case '--sourcedriver':
+			case '--targetdriver':
+				{
+				let flag  = arg_list[i+0];
 				let field = arg_list[i+1];
 				let value = arg_list[i+2];
 
 				if(field == null || field.startsWith('-')){
 					throw new Error("Expected <field> to be specified for flag " +
-													arg + ", got: " + field);
+													flag + ", got: " + field
+												 );
+				}
+				if(value == null || value.startsWith('-')){
+					throw new Error("Expected <value> to be specified for flag " +
+													flag + ", got: " + field
+												 );
+				}
+
+				switch(flag){
+					case '--model':
+						processFlagSetSubField(field, value, options.dot_models);
+						break;
+					case '--sourcedriver':
+						processFlagSetSubField(field, value, options.sourcedriver);
+						break;
+					case '--targetdriver':
+						processFlagSetSubField(field, value, options.targetdriver);
+						break;
+				}
+
+				i += 2;
+
+				break;
+			}
+
+			// arguments with 2 parameters, 1st of which is optional
+			case '--modelfile':
+			case '--modelcmd': {
+				let flag  = arg_list[i+0];
+				let field = arg_list[i+1];
+				let value = arg_list[i+2];
+
+				if(field == null || field.startsWith('-')){
+					throw new Error("Expected <field> to be specified for flag " +
+													flag + ", got: " + field);
 				}
 
 				if(value == null || value.startsWith('-')){
@@ -207,13 +249,7 @@ function parseOptionalArguments(arg_list : Array<string>) : TreeployOptions|null
 					i += 2; // skip the <field> <value> arguments
 				}
 
-				switch(arg){
-					case '--model':
-						if(field === ''){
-							throw new Error("<field> argument is mandatory for --model flag");
-						}
-						processFlagModel(field, value, options);
-						break;
+				switch(flag){
 					case '--modelfile':
 						processFlagModelFile(field, value, options);
 						break;
@@ -223,6 +259,8 @@ function parseOptionalArguments(arg_list : Array<string>) : TreeployOptions|null
 				}
 
 				break;
+			}
+
 			default:
 				throw new Error("Unexpected argument: " + arg_list[i]);
 		}
@@ -272,7 +310,7 @@ function processFlagModelFile(model_path : string,
 		throw new Error("Failed to parse modelfile '" + file_name + "': " + e.message);
 	}
 
-	setModelField(model_path, loaded_data, options);
+	setObjectSubField(model_path, loaded_data, options.dot_models);
 }
 
 /**
@@ -280,13 +318,13 @@ function processFlagModelFile(model_path : string,
  *
  * @param {string} field_name  - The name of the field to modify
  * @param {string} field_value - The new value for field
- * @param {object} options - Current state of parsed options, this will be
- * modified to reflect new options with additional model field
+ * @param {object} root_object - The object containing (or about to contain)
+ * the field you wish to set
  */
-function processFlagModel(field_name  : string,
-													field_value : any,
-													options     : TreeployOptions
-												 ) : void {
+function processFlagSetSubField(field_name  : string,
+																field_value : any,
+																root_object : any
+															 ) : void {
 	if(field_value.match(/^[0-9]+$/)){
 		field_value = parseInt(field_value);
 	} else if(field_value.match(/^(\+|-)?[0-9]*\.[0-9]+$/)){
@@ -305,7 +343,7 @@ function processFlagModel(field_name  : string,
 		field_value = field_value.substr(1, field_value.length-2);
 	}
 
-	setModelField(field_name, field_value, options);
+	setObjectSubField(field_name, field_value, root_object);
 }
 
 /**
@@ -325,35 +363,34 @@ function processFlagModelCmd(field   : string,
 	let cmd_stdout = cmd_result.toString('utf8');
 	try {
 		let data = JSON.parse(cmd_stdout);
-		setModelField(field, data, options);
+		setObjectSubField(field, data, options.dot_models);
 	} catch (e) {
 		throw new Error("modelcmd output invalid JSON: " + e.message);
 	}
 }
 
 /**
- * Sets some field of the doT.js model in options
+ * Sets some field in an object.
  *
- * Note, this function will create any intermediate objects, eg
+ * This function will create any intermediate objects, eg
  * if setting web.host.domain it will create the host object within
  * web, and then set the domain field of that
  *
  * @param field_name - Name of field, may contain dots to indicate
  * fields within objects
  * @param field_value - The value to set the field to
- * @param  options - Current state of parsed options, this will be
- * modified to reflect new options with additional model field
+ * @param  root_object - The object which contains the field to set
  */
-function setModelField(field_name  : string,
-											 field_value : any,
-											 options     : TreeployOptions){
+function setObjectSubField(field_name  : string,
+													 field_value : any,
+													 root_object : any){
 	if(field_name === ''){
-		options.dot_models = Object.assign(options.dot_models, field_value);
+		Object.assign(root_object, field_value);
 		return;
 	}
 
 	let field_parts = field_name.split('.');
-	let object_node = <any>options.dot_models;
+	let object_node = root_object;
 	for(let i = 0; i < field_parts.length - 1; ++i){
 		if(object_node[field_parts[i]] == null){
 			object_node[field_parts[i]] = {};

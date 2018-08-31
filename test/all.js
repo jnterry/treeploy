@@ -37,5 +37,6 @@ describe('all', () => {
 		importTest('cli/modelcmd');
 		importTest('cli/model_overwrites');
 		importTest('cli/dryrun');
+		importTest('cli/driver_options');
 	});
 });

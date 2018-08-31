@@ -66,6 +66,18 @@ export class TreeployOptions {
 
 	/** If set then no file system modifications will be made */
 	dryrun?     : boolean = false;
+
+	/** Additional options to be passed to the source driver */
+	sourcedriver : {
+		name? : string,
+		[index:string] : any,
+	} = {};
+
+	/** Additional options to be passed to the target driver */
+	targetdriver : {
+		name? : string,
+		[index:string] : any,
+	} = {};
 };
 
 /**
