@@ -141,8 +141,9 @@ export class FileDriver {
 		if(path_type !== PathType.NoExist){
 			// The path component exists as a non-directory
 			if(!this.options.force){
-				throw new Error("Failed to create directory: " + path +
-												" due to conflicting " + path_type.toString().toLowerCase()
+				throw new Error("Failed to create directory at '" + path +
+												"' due to conflicting " + path_type.toString().toLowerCase() +
+												" and force flag is not set"
 											 );
 			}
 			log.info("Overwritting conflicting non-directory with directory: " + path);
