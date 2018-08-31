@@ -47,14 +47,13 @@
 	},
 	"nyc": {
 		"extension": [
-			".ts",
-			".d.ts"
+			".ts"
 		],
 		"include": [
 			"src/**/*"
 		],
 		"exclude": [
-			"dist/**/*"
+			"**/*/*.d.ts"
 		],
 		"all": true,
 		"require": [
