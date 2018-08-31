@@ -2,9 +2,10 @@
  * Exports a file driver which manipulates a remote file system over SSH2
  */
 
-import { Client }    from 'ssh2';
-import { promisify } from 'util';
-import os            from 'os';
+import { promisify }      from 'util';
+import os                 from 'os';
+
+const NodeSsh = require('node-ssh');
 
 import { FileDriver, FileDriverOptions, IFileDriverFactory } from './FileDriver';
 import { PathAttr, PathType, IWriter, IReader }              from './FileDriverTypes';
@@ -48,35 +49,66 @@ class Ssh2Writer implements IWriter {
 };
 
 
+interface SshTarget {
+	username : string,
+	hostname : string,
+	path     : string,
+};
+
+/**
+ * Parses a string of the form user@host:/path to
+ * create an SshTarget
+ */
+function parseSshTarget(path: string) : SshTarget {
+	let parts = path.match(path_regex);
+
+	if(parts == null){
+		throw new Error("Failed to parse '" + path + "' as valid Ssh2 target");
+	}
+
+	let username    = parts[1];
+	let hostname    = parts[2];
+	let remote_path = parts[3];
+
+	if(username == null){
+		username = os.userInfo().username;
+	} else {
+		// trim off the trailing @
+		username = username.substring(0, username.length-1);
+	}
+
+	if(remote_path == null){
+		remote_path = './';
+	}
+
+	return {
+		username : username,
+		hostname : hostname,
+		path     : remote_path,
+	};
+}
+
+
 function createSsh2Driver(options : FileDriverOptions) : Promise<FileDriver> {
-	return new Promise<FileDriver>((resolve, reject) => {
 
-		let parts = options.path.match(path_regex);
-		console.dir(parts);
+	let ssh_target = parseSshTarget(options.path);
 
-		if(parts == null){
-			throw new Error("Failed to parse '" + options.path + "' as valid Ssh2 target");
-		}
+	let client = new NodeSsh();
 
-		let username    = parts[1];
-		let hostname    = parts[2];
-		let remote_path = parts[3];
-
-		if(username == null){
-			username = os.userInfo().username;
-		} else {
-			// trim off the trailing @
-			username = username.substring(0, username.length-1);
-		}
-
-		if(remote_path == null){
-			remote_path = './';
-		}
-
-		let client = new Client();
-
-		client.on('ready', function() {
-			log.info("Connection to " + hostname + " established as user: " + username);
+	return client
+		.connect({
+			host     : ssh_target.hostname,
+			port     : 22, // :TODO: support non-standard ports
+			username : ssh_target.username,
+			agent    : process.env['SSH_AUTH_SOCK'],
+		}).catch((err : any) => {
+			throw new Error("Failed to connect to " + ssh_target.username + "@"
+											+ ssh_target.hostname + ": " + err.message
+										 );
+		}).then(() => {
+			log.info("Connection to " + ssh_target.hostname +
+							 " established as user: " + ssh_target.username
+							);
 
 			let reader : IReader = new Ssh2Reader();
 			let writer : IWriter | undefined;
@@ -85,21 +117,8 @@ function createSsh2Driver(options : FileDriverOptions) : Promise<FileDriver> {
 				writer = new Ssh2Writer();
 			}
 
-			resolve(new FileDriver(options, reader, writer));
+			return new FileDriver(options, reader, writer);
 		});
-
-		client.on('error', function(err) {
-			reject(new Error("Failed to connect to " + username + "@" + hostname + ": " + err.message));
-		});
-
-		client.connect({
-			host     : hostname,
-			port     : 22, // :TODO: support non-standard ports
-			username : username,
-			agent    : process.env['SSH_AUTH_SOCK'],
-		});
-
-	});
 }
 
 // To quote the output of 'adduser' on ubuntu 18.04:
