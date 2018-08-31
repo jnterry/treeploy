@@ -92,7 +92,7 @@ class TreeployContext {
 		});
 		this.target = FileDriverLocal.create({
 			path            : target_path,
-			writes_enabled  : !options.dryrun   || true,
+			writes_enabled  : !options.dryrun,
 			overwrite       : options.overwrite || options.force || false,
 			force           : options.force     || false,
 		});

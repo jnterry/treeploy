@@ -65,16 +65,21 @@ global.expectFile = function(name_arg, opts){
 
 	let stats = fs.statSync(name);
 	expect(stats.isFile()).is.true;
-	checkStats(stats, opts);
 
-	if(opts != null && opts.content != null){
-		let content = fs.readFileSync(name).toString();
+	let content = fs.readFileSync(name).toString();
 
-		if (typeof opts.content === 'object'){
-			content = JSON.parse(content);
+	if(typeof opts === 'string'){
+		expect(content).is.deep.equal(opts);
+	} else {
+		checkStats(stats, opts);
+
+		if(opts != null && opts.content != null){
+			if (typeof opts.content === 'object'){
+				content = JSON.parse(content);
+			}
+
+			expect(content).is.deep.equal(opts.content);
 		}
-
-		expect(content).is.deep.equal(opts.content);
 	}
 }
 

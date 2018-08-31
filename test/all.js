@@ -24,6 +24,7 @@ describe('all', () => {
 		importTest('treeploy/dot_files');
 		importTest('treeploy/mixed');
 		importTest('treeploy/single_file');
+		importTest('treeploy/dryrun');
 	});
 
 	describe('cli', () => {
