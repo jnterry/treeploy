@@ -4,9 +4,8 @@
 
 global.mockfs       = require('mock-fs');
 
-global.file_utils   = require('../dist/file_utils.js');
-global.treeploy     = require('../dist/treeploy.js').default;
-global.treeploy_cli = require('../dist/cli.js').default;
+global.treeploy     = require('../src/treeploy.ts').default;
+global.treeploy_cli = require('../src/cli.ts').default;
 
 const chai = require('chai');
 chai.use(require('chai-as-promised'));
@@ -34,7 +33,8 @@ function checkStats(stats, opts){
 	if(opts == null){ return; }
 
 	if(opts.mode != null){
-		expect(file_utils.getStatPermissionString(stats)).is.deep.equal(opts.mode);
+		let perm_string = '0' + (stats.mode & parseInt('777', 8)).toString(8);
+		expect(perm_string).is.deep.equal(opts.mode);
 	}
 
 	if(opts.uid != null){
@@ -65,16 +65,21 @@ global.expectFile = function(name_arg, opts){
 
 	let stats = fs.statSync(name);
 	expect(stats.isFile()).is.true;
-	checkStats(stats, opts);
 
-	if(opts != null && opts.content != null){
-		let content = fs.readFileSync(name).toString();
+	let content = fs.readFileSync(name).toString();
 
-		if (typeof opts.content === 'object'){
-			content = JSON.parse(content);
+	if(typeof opts === 'string'){
+		expect(content).is.deep.equal(opts);
+	} else {
+		checkStats(stats, opts);
+
+		if(opts != null && opts.content != null){
+			if (typeof opts.content === 'object'){
+				content = JSON.parse(content);
+			}
+
+			expect(content).is.deep.equal(opts.content);
 		}
-
-		expect(content).is.deep.equal(opts.content);
 	}
 }
 

@@ -6,7 +6,6 @@
 "use strict"
 
 import fs            from 'fs';
-import stdin         from 'readline-sync';
 import yaml          from 'js-yaml';
 import path          from 'path';
 import { execSync }  from 'child_process';
@@ -61,37 +60,6 @@ async function treeploy_cli(arg_list : Array <string>){
 
 
 	/////////////////////////////////////////////////////////
-	// Check if we are root
-	if(!options.noroot && process.getuid() != 0){
-		console.log('Not running as root, may not be able set file permissions, owners, etc');
-		let response = stdin.question('Continue? [y/N]');
-		if(!response.match('[Yy]|[Yy][Ee][Ss]')){
-			return 0;
-		}
-	}
-	/////////////////////////////////////////////////////////
-
-
-
-	/////////////////////////////////////////////////////////
-	// Check output does not exist, or if it does prompt user
-	// if they want to continue
-	if(!options.overwrite && fs.existsSync(output_path)){
-		let out_stat = fs.statSync(output_path);
-
-		console.log("The output path already exists, it, or its decendents may be overwritten");
-
-		let response = stdin.question("Continue? [y/N] ");
-		if(!response.match('[Yy]|[Yy][Ee][Ss]')){
-			return 0;
-		}
-		options.overwrite = true;
-	}
-	/////////////////////////////////////////////////////////
-
-
-
-	/////////////////////////////////////////////////////////
 	// Run treeploy
 	return treeploy(input_path, output_path, options)
 		.then(() => 0)
@@ -129,11 +97,18 @@ Options:
 |                     |   2 : above and info/debug messages                    |
 |                     |   3 : above and trace messages                         |
 #=====================#========================================================#
-| --overwrite         | Disable CLI nag when the destination path exists.      |
-|                     | The program will overwrites any conflicting paths      |
+| --overwrite         | Overwrite contents of existing files if nessacery      |
 +---------------------+--------------------------------------------------------+
-| --noroot            | Disable CLI nag when running as user other than root   |
-|                     | Program may fail to set permissions on files           |
+| --force             | Take all measures required to make the target state be |
+|                     | as it should - for example removing a file in order to |
+|                     | create a directory of the same name, or vice-versa     |
+|                     | This options implies overwrite                         |
++---------------------+--------------------------------------------------------+
+| -n, --noop          | Prevents any modifications being made to file system.  |
+| --no-action         | Best used with -v to see what is going on
+| --dryrun            | Note --overwrite and --force change what actions would |
+|                     | be taken and thus affect logged output, however even   |
+|                     | with those flags no actions will actually be taken     |
 #=====================#========================================================#
 | --model \\           | Sets a field of the model passed to doT templates      |
 |     <field> <value> |                                                        |
@@ -197,13 +172,19 @@ function parseOptionalArguments(arg_list : Array<string>) : TreeployOptions|null
 		switch(arg_list[i]){
 			case '-v':
 			case '--verbose':
-				++options.verbosity;
+				++options.verbosity!;
 				break;
 			case '-h': // this must have been in a combined argument, eg -vh, so not be caught already
 				displayHelp();
 				return null;
-			case '--noroot'    : options.noroot    = true; break;
+			case '-n':
+			case '--noop':
+			case '--no-action':
+			case '--dryrun':
+				options.dryrun      = true;
+				break;
 			case '--overwrite' : options.overwrite = true; break;
+			case '--force'     : options.force     = true; break;
 
 				// arguments with parameters
 			case '--model':

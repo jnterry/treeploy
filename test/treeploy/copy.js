@@ -107,11 +107,71 @@ it('Deploy to non-empty directory without confilicting files', () => {
 		});
 });
 
-it('Deploy to non-empty directory with confilicting files', () => {
+it('Deploy to non-empty directory with conflicting files, no overwrite', () => {
 	fs.mkdirSync('target');
 	fs.writeFileSync('target/hello.txt', "text\ngoes\nhere");
 
-	return treeploy('source', 'target')
+	expect(treeploy('source', 'target')).is.rejected;
+	expect(fs.readFileSync('target/hello.txt').toString()).is.deep.equal("text\ngoes\nhere");
+});
+
+it('Deploy to non-empty directory with conflicting files and overwrite flag', () => {
+	fs.mkdirSync('target');
+	fs.writeFileSync('target/hello.txt', "text\ngoes\nhere");
+
+	return treeploy('source', 'target', { overwrite: true })
+		.then(() => {
+			assertDirectoryCorrect('target');
+		});
+});
+
+it('Conflicting file blocking directory is not overwritten with no flags', () => {
+	fs.mkdirSync('target');
+	fs.writeFileSync('target/dir_a', 'I\'m a conflict');
+
+	expect(treeploy('source', 'target')).is.rejected;
+	expect(fs.readFileSync('target/dir_a').toString()).is.deep.equal('I\'m a conflict');
+});
+
+it('Conflicting file blocking directory is not overwritten with overwrite flag', () => {
+	fs.mkdirSync('target');
+	fs.writeFileSync('target/dir_a', 'I\'m a conflict');
+
+	expect(treeploy('source', 'target'), { overwrite: true}).is.rejected;
+	expect(fs.readFileSync('target/dir_a').toString()).is.deep.equal('I\'m a conflict');
+});
+
+it('Conflicting file blocking directory IS overwritten with force flag', () => {
+	fs.mkdirSync('target');
+	fs.writeFileSync('target/dir_a', 'I\'m a conflict');
+
+	return treeploy('source', 'target', { force: true })
+		.then(() => {
+			assertDirectoryCorrect('target');
+		});
+});
+
+it('Conflicting directory blocking file is not overwritten with no flags', () => {
+	fs.mkdirSync('target');
+	fs.mkdirSync('target/hello.txt');
+
+	expect(treeploy('source', 'target')).is.rejected;
+	expect(fs.statSync('target/hello.txt').isDirectory()).is.true;
+});
+
+it('Conflicting directory blocking file is not overwritten with overwrite flag', () => {
+	fs.mkdirSync('target');
+	fs.mkdirSync('target/hello.txt');
+
+	expect(treeploy('source', 'target'), { overwrite: true }).is.rejected;
+	expect(fs.statSync('target/hello.txt').isDirectory()).is.true;
+});
+
+it('Conflicting file blocking directory IS overwritten with force flag', () => {
+	fs.mkdirSync('target');
+	fs.mkdirSync('target/hello.txt');
+
+	return treeploy('source', 'target', { force: true })
 		.then(() => {
 			assertDirectoryCorrect('target');
 		});

@@ -1,14 +1,18 @@
 /**
- * Test suite for functions defined in file_utils.js
+ * Test suite for FileLocalDriver
  */
 
 "use strict";
 
 require('./common.js');
-const fs = require('fs');
-const FileDriverLocal = require('../dist/file_drivers/local.js').default;
 
+const rewire = require('rewire');
+const fs     = require('fs');
 const execSync   = require('child_process').execSync;
+
+const FileDriverLocal = rewire('../src/file_drivers/Local.ts');
+
+let getStatPermissionString = FileDriverLocal.__get__("getStatPermissionString");
 
 describe('getStatPermissionString', () => {
 
@@ -29,7 +33,7 @@ describe('getStatPermissionString', () => {
 			});
 
 			let stat   = fs.statSync('thing.txt');
-			let result = file_utils.getStatPermissionString(stat);
+			let result = getStatPermissionString(stat);
 			expect(result).is.deep.equal('0' + perm_str);
 
 			mockfs.restore();
@@ -38,8 +42,7 @@ describe('getStatPermissionString', () => {
 });
 
 describe('setAttributes', () => {
-
-	let fdriver = new FileDriverLocal();
+	let fdriver = new FileDriverLocal.default.create({ path: '/', writes_enabled: true });
 
 	beforeEach(() => {
 		mockfs({
@@ -63,7 +66,7 @@ describe('setAttributes', () => {
 				let stats = fs.statSync('test.txt');
 				expect(stats.uid).is.deep.equal(3000);
 				expect(stats.gid).is.deep.equal(3000);
-				expect(file_utils.getStatPermissionString(stats)).is.deep.equal('0644');
+				expect(getStatPermissionString(stats)).is.deep.equal('0644');
 			});
 	});
 
@@ -74,7 +77,7 @@ describe('setAttributes', () => {
 				let stats = fs.statSync('test.txt');
 				expect(stats.uid).is.deep.equal(1234);
 				expect(stats.gid).is.deep.equal(3000);
-				expect(file_utils.getStatPermissionString(stats)).is.deep.equal('0644');
+				expect(getStatPermissionString(stats)).is.deep.equal('0644');
 			});
 	});
 
@@ -85,7 +88,7 @@ describe('setAttributes', () => {
 				let stats = fs.statSync('test.txt');
 				expect(stats.uid).is.deep.equal(3000);
 				expect(stats.gid).is.deep.equal(4321);
-				expect(file_utils.getStatPermissionString(stats)).is.deep.equal('0644');
+				expect(getStatPermissionString(stats)).is.deep.equal('0644');
 			});
 	});
 
@@ -96,7 +99,7 @@ describe('setAttributes', () => {
 				let stats = fs.statSync('test.txt');
 				expect(stats.uid).is.deep.equal(3000);
 				expect(stats.gid).is.deep.equal(3000);
-				expect(file_utils.getStatPermissionString(stats)).is.deep.equal('0777');
+				expect(getStatPermissionString(stats)).is.deep.equal('0777');
 			});
 	});
 
@@ -107,7 +110,7 @@ describe('setAttributes', () => {
 				let stats = fs.statSync('test.txt');
 				expect(stats.uid).is.deep.equal(1111);
 				expect(stats.gid).is.deep.equal(2222);
-				expect(file_utils.getStatPermissionString(stats)).is.deep.equal('0644');
+				expect(getStatPermissionString(stats)).is.deep.equal('0644');
 			});
 	});
 
@@ -122,7 +125,7 @@ describe('setAttributes', () => {
 				let stats = fs.statSync('test.txt');
 				expect(stats.uid).is.deep.equal(3333);
 				expect(stats.gid).is.deep.equal(4444);
-				expect(file_utils.getStatPermissionString(stats)).is.deep.equal('0666');
+				expect(getStatPermissionString(stats)).is.deep.equal('0666');
 			});
 	});
 
