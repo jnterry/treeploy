@@ -1,3 +1,9 @@
+- v0.5.0:
+    date: '2018-08-31'
+    fixes:
+      - Add distinction between --overwrite and a new --force flag for controlling how much potential destruction is allowed in order to get the target path in the desired state
+      - Add --dryrun flag
+      - Remove useless --noroot flag
 - v0.4.2:
     date: '2018-08-29'
     fixes:
