@@ -59,7 +59,6 @@ export class FileDriver {
 		this.reader  = reader;
 
 		if(writer === undefined){
-			log.info("Creating read only file driver");
 			this.writer = {
 				writeFile      : async () => { return; },
 				remove         : async () => { return; },
@@ -227,7 +226,7 @@ export class FileDriver {
 	 * we do not have permission to modify its attributes
 	 */
 	setAttributes(path : string, attributes : PathAttr) : Promise<void>{
-		log.debug("Setting path attributes on: " + path);
+		log.trace("Setting path attributes on: " + path);
 		return this.writer.setAttributes(path, attributes);
 	}
 };
