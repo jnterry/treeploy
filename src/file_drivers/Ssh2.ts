@@ -2,8 +2,9 @@
  * Exports a file driver which manipulates a remote file system over SSH2
  */
 
-import Ssh2          from 'ssh2';
+import { Client }    from 'ssh2';
 import { promisify } from 'util';
+import os            from 'os';
 
 import { FileDriver, FileDriverOptions, IFileDriverFactory } from './FileDriver';
 import { PathAttr, PathType, IWriter, IReader }              from './FileDriverTypes';
@@ -20,7 +21,7 @@ class Ssh2Reader implements IReader {
 	}
 
 	async getPathType(path : string) : Promise<PathType> {
-		return PathType.NoExist;
+		return PathType.File;
 	}
 
 	async getAttributes(path : string) : Promise<PathAttr> {
@@ -47,15 +48,58 @@ class Ssh2Writer implements IWriter {
 };
 
 
-async function createSsh2Driver(options : FileDriverOptions) : Promise<FileDriver> {
-	let reader : IReader = new Ssh2Reader();
-	let writer : IWriter | undefined;
+function createSsh2Driver(options : FileDriverOptions) : Promise<FileDriver> {
+	return new Promise<FileDriver>((resolve, reject) => {
 
-	if(options.writes_enabled){
-		writer = new Ssh2Writer();
-	}
+		let parts = options.path.match(path_regex);
+		console.dir(parts);
 
-	return new FileDriver(options, reader, writer);
+		if(parts == null){
+			throw new Error("Failed to parse '" + options.path + "' as valid Ssh2 target");
+		}
+
+		let username    = parts[1];
+		let hostname    = parts[2];
+		let remote_path = parts[3];
+
+		if(username == null){
+			username = os.userInfo().username;
+		} else {
+			// trim off the trailing @
+			username = username.substring(0, username.length-1);
+		}
+
+		if(remote_path == null){
+			remote_path = './';
+		}
+
+		let client = new Client();
+
+		client.on('ready', function() {
+			log.info("Connection to " + hostname + " established as user: " + username);
+
+			let reader : IReader = new Ssh2Reader();
+			let writer : IWriter | undefined;
+
+			if(options.writes_enabled){
+				writer = new Ssh2Writer();
+			}
+
+			resolve(new FileDriver(options, reader, writer));
+		});
+
+		client.on('error', function(err) {
+			reject(new Error("Failed to connect to " + username + "@" + hostname + ": " + err.message));
+		});
+
+		client.connect({
+			host     : hostname,
+			port     : 22, // :TODO: support non-standard ports
+			username : username,
+			agent    : process.env['SSH_AUTH_SOCK'],
+		});
+
+	});
 }
 
 // To quote the output of 'adduser' on ubuntu 18.04:
