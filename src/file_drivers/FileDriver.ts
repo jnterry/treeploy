@@ -65,7 +65,7 @@ export class FileDriver {
 							root_path : string,
 							reader    : IReader,
 							writer    : IWriter | undefined){
-		log.warn("Creating driver for: " + root_path + " as read only");
+		log.debug("Creating driver for: " + root_path + " as read only");
 
 		this.options   = options;
 		this.reader    = reader;
