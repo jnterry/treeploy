@@ -47,7 +47,7 @@ class Ssh2Writer implements IWriter {
 };
 
 
-function createSsh2Driver(options : FileDriverOptions) : FileDriver {
+async function createSsh2Driver(options : FileDriverOptions) : Promise<FileDriver> {
 	let reader : IReader = new Ssh2Reader();
 	let writer : IWriter | undefined;
 
@@ -88,4 +88,5 @@ let path_regex = new RegExp('^' +
 export default {
 	create     : createSsh2Driver,
 	path_regex : path_regex,
+	name       : 'ssh2',
 } as IFileDriverFactory;

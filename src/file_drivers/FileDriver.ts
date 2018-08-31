@@ -236,10 +236,15 @@ export interface IFileDriverFactory {
 	 * Creates a new instance of a [[FileDriver]] of the type
 	 * supported by this factory
 	 */
-	create(options : FileDriverOptions) : FileDriver;
+	create(options : FileDriverOptions) : Promise<FileDriver>;
 
 	/**
 	 * Set of valid path strings that the file driver can handle
 	 */
 	path_regex : RegExp;
+
+	/**
+	 * Human readable string describing the name of this file driver
+	 */
+	name       : string;
 };

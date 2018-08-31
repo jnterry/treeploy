@@ -145,7 +145,7 @@ class LocalWriter implements IWriter {
 };
 
 
-function createLocalDriver(options : FileDriverOptions) : FileDriver {
+async function createLocalDriver(options : FileDriverOptions) : Promise<FileDriver> {
 	let reader : IReader = new LocalReader();
 	let writer : IWriter | undefined;
 
@@ -159,4 +159,5 @@ function createLocalDriver(options : FileDriverOptions) : FileDriver {
 export default {
 	create     : createLocalDriver,
 	path_regex : /.+/,
+	name       : 'local',
 } as IFileDriverFactory;

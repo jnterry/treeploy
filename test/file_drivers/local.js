@@ -41,8 +41,8 @@ describe('getStatPermissionString', () => {
 	}
 });
 
-describe('setAttributes', () => {
-	let fdriver = new FileDriverLocal.default.create({ path: '/', writes_enabled: true });
+describe('setAttributes', async () => {
+	let fdriver = await FileDriverLocal.default.create({ path: '/', writes_enabled: true });
 
 	beforeEach(() => {
 		mockfs({

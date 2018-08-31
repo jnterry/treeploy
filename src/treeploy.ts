@@ -10,7 +10,6 @@ import fs         from 'fs';
 import dot_engine from 'dot';
 
 import { FileDriver, PathType } from './file_drivers/FileDriver'
-import FileDriverLocal          from './file_drivers/Local';
 import log                      from './log';
 
 dot_engine.templateSettings = {
@@ -28,6 +27,11 @@ dot_engine.templateSettings = {
 	useParams     : /.*/, // these fields aren't documented...
 	defineParams  : /.*/, // no idea what to set them to...
 };
+
+let driver_factories = [
+	require('./file_drivers/Ssh2.ts').default,
+	require('./file_drivers/Local.ts').default,
+];
 
 /**
  * Type representing the possible arguments used to create a
@@ -63,45 +67,67 @@ export class TreeployOptions {
  * Type representing all options and state required to carry out the
  * treeployment process
  */
-class TreeployContext {
-	constructor(source_path : string,
-							target_path : string,
-							options     : TreeployOptions | null
-						 ){
-
-		if(options == null){
-			options = new TreeployOptions();
-		}
-
-		log.setLevel(options.verbosity || 0);
-
-		if(options.dot_models == null) {
-			this.dot_models = [{}]; // 1 object for single default dot variable 'it'
-		} else {
-			// we need to guarentee that the dot_engine.varname order matches up
-			// with the order of parameters we pass to templates, convert everything
-			// to an array here and use that from now on
-			let models = Object.keys(options.dot_models);
-			this.dot_models = models.map((x : string) => (<any>options).dot_models[x] );
-			dot_engine.templateSettings.varname = models.join(',');
-		}
-
-		this.source = FileDriverLocal.create({
-			path: source_path,
-			writes_enabled: false,
-		});
-		this.target = FileDriverLocal.create({
-			path            : target_path,
-			writes_enabled  : !options.dryrun,
-			overwrite       : options.overwrite || options.force || false,
-			force           : options.force     || false,
-		});
-	}
-
+interface TreeployContext {
 	dot_models : Array<any>;
 	source     : FileDriver;
 	target     : FileDriver;
 };
+
+async function createTreeployContext(source_path : string,
+																		 target_path : string,
+																		 options     : TreeployOptions | null
+																		) : Promise<TreeployContext> {
+
+	if(options == null){
+		options = new TreeployOptions();
+	}
+
+	let result = {} as any;
+
+	log.setLevel(options.verbosity || 0);
+
+	if(options.dot_models == null) {
+		result.dot_models = [{}]; // 1 object for single default dot variable 'it'
+	} else {
+		// we need to guarentee that the dot_engine.varname order matches up
+		// with the order of parameters we pass to templates, convert everything
+		// to an array here and use that from now on
+		let models = Object.keys(options.dot_models);
+		result.dot_models = models.map((x : string) => (<any>options).dot_models[x] );
+		dot_engine.templateSettings.varname = models.join(',');
+	}
+
+	for (let df of driver_factories) {
+		if(df.path_regex.test(source_path)){
+			log.info("Using " + df.name + " driver for source path: " + source_path);
+			result.source = await df.create({
+				path: source_path,
+				writes_enabled: false,
+			});
+			break;
+		}
+	}
+	if(result.source == null){
+		throw new Error("Failed to find appropriate driver for source path: " + source_path);
+	}
+
+	for(let df of driver_factories) {
+		if(df.path_regex.test(target_path)){
+			log.info("Using " + df.name + " driver for target path: " + target_path);
+			result.target = await df.create({
+				path            : target_path,
+				writes_enabled  : !options.dryrun,
+				overwrite       : options.overwrite || options.force || false,
+				force           : options.force     || false,
+			});
+		}
+	}
+	if(result.target == null){
+		throw new Error("Failed to find appropriate driver for target path: " + target_path);
+	}
+
+	return result as TreeployContext;
+}
 
 // regexes for matching different types of files
 const file_name_regex = {
@@ -123,7 +149,7 @@ async function treeploy(source_path : string,
 												target_path : string,
 												options     : TreeployOptions) : Promise<void>{
 
-	let cntx = new TreeployContext(source_path, target_path, options);
+	let cntx = await createTreeployContext(source_path, target_path, options);
 
 	let path_type = await cntx.source.getPathType(source_path);
 
