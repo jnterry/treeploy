@@ -57,7 +57,7 @@ Treeploy is designed to be used in one of the following ways:
 
 # Operation
 
-The basic operation of `treeploy` is to take some input directory tree and copy all files within it to some output directory tree.
+The basic operation of `treeploy` is to take some source directory tree and copy all files within it to some target directory tree.
 
 However there is special handling of some files in the input tree:
 
@@ -146,8 +146,7 @@ Below is an outline of the available file drivers and their associated optional 
 <td>local</td>
 <td>/path/to/dir<br/>./../relative/path</td>
 <td>
-<ul>
-<li>No optional arguments accepted</li>
+<ul>N/A
 </ul>
 </td>
 </tr>
