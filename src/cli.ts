@@ -105,9 +105,8 @@ Options:
 |                     | This options implies overwrite                         |
 +---------------------+--------------------------------------------------------+
 | -n, --noop          | Prevents any modifications being made to file system.  |
-| --no-action         | Implies verbosity level 2 so actions that would have   |
-| --dryrun            | been taken are printed, specify -v to increase further |
-|                     | Note --overwrite and --force change what actions would |
+| --no-action         | Best used with -v to see what is going on
+| --dryrun            | Note --overwrite and --force change what actions would |
 |                     | be taken and thus affect logged output, however even   |
 |                     | with those flags no actions will actually be taken     |
 #=====================#========================================================#
@@ -183,7 +182,6 @@ function parseOptionalArguments(arg_list : Array<string>) : TreeployOptions|null
 			case '--no-action':
 			case '--dryrun':
 				options.dryrun      = true;
-				options.verbosity! += 2;
 				break;
 			case '--overwrite' : options.overwrite = true; break;
 			case '--force'     : options.force     = true; break;

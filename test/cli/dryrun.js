@@ -19,37 +19,31 @@ describe('Basic usage', () => {
 	it('--dryrun', () => {
 		let opts = parseOpts(['--dryrun']);
 		expect(opts.dryrun   ).is.true;
-		expect(opts.verbosity).is.deep.equal(2);
 	});
 
 	it('-n', () => {
 		let opts = parseOpts(['-n']);
 		expect(opts.dryrun   ).is.true;
-		expect(opts.verbosity).is.deep.equal(2);
 	});
 
 	it('-nv', () => {
 		let opts = parseOpts(['-nv']);
 		expect(opts.dryrun   ).is.true;
-		expect(opts.verbosity).is.deep.equal(3);
 	});
 
 	it('-vn', () => {
 		let opts = parseOpts(['-vn']);
 		expect(opts.dryrun   ).is.true;
-		expect(opts.verbosity).is.deep.equal(3);
 	});
 
 	it('--noop', () => {
 		let opts = parseOpts(['--noop']);
 		expect(opts.dryrun   ).is.true;
-		expect(opts.verbosity).is.deep.equal(2);
 	});
 
 	it('--no-action', () => {
 		let opts = parseOpts(['--no-action']);
 		expect(opts.dryrun   ).is.true;
-		expect(opts.verbosity).is.deep.equal(2);
 	});
 });
 
