@@ -105,19 +105,75 @@ class Ssh2Writer extends Ssh2Reader implements IWriter {
 	}
 
 	async writeFile(path : string, content : String | Buffer) : Promise<void>{
-		return;
+		// If we ever needed to support write streams can theoretically emulate with tee:
+		// https://github.com/mscdex/ssh2/issues/626#issuecomment-337250142
+		// -> not sure if node-ssh (wrapper around ssh2) supports streams very well though...
+		return this
+			.execCmdMaybeSudo(['echo', content.toString(), '>', path])
+			.then((result) => {
+				if(result.code === 0){
+					return;
+				}
+				throw new Error("Failed to write file: " + path + ": " + result.stderr);
+			});
 	}
 
 	async mkdirComponent(path : string) : Promise<void>{
+		return this
+			.execCmdMaybeSudo(['[ -d foo ] || mkdir', '-p', path])
+			.then((result) => {
+				if(result.code === 0){
+					return;
+				}
+				throw new Error("Failed to create directory: " + path + ": " + result.stderr);
+
+			});
 		return;
 	}
 
 	async remove(path : string) : Promise<void> {
-		return;
+		return this
+			.execCmdMaybeSudo(['rm', '-r', path])
+			.then((result) => {
+				if(result.code === 0){
+					return;
+				}
+				throw new Error("Failed to delete path: " + path + ": " + result.stderr);
+			});
 	};
 
 	async setAttributes(path : string, attributes : PathAttr) : Promise<void> {
-		return;
+		try {
+			if(attributes.owner != null) {
+				await this
+					.execCmdMaybeSudo(['chown', '' + attributes.owner, path])
+					.then((result) => {
+						if(result.code === 0){ return; }
+						throw new Error(result.stderr);
+					});
+			}
+
+
+			if(attributes.group != null){
+				await this
+					.execCmdMaybeSudo(['chgrp', '' + attributes.group, path])
+					.then((result) => {
+						if(result.code === 0){ return; }
+						throw new Error(result.stderr);
+					});
+			}
+
+			if(attributes.mode != null){
+				await this
+					.execCmdMaybeSudo(['chmod', attributes.mode, path])
+					.then((result) => {
+						if(result.code === 0){ return; }
+						throw new Error(result.stderr);
+					});
+			}
+		} catch (e) {
+			throw new Error("Failed to modifiy attributes of: " + path + ": " + e.message);
+		}
 	}
 };
 
