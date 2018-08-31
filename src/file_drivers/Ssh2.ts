@@ -36,16 +36,37 @@ import log                                                   from './../log';
 
 class Ssh2Reader implements IReader {
 
-	private client   : any;
-	private use_sudo : boolean;
+	private client          : any;
+	private use_sudo        : boolean;
+	private sudo_successful : boolean;
 
 	constructor(client : any, use_sudo : boolean){
-		this.client   = client;
-		this.use_sudo = use_sudo;
+		this.client          = client;
+		this.use_sudo        = use_sudo;
+		this.sudo_successful = false;
 	}
 
 	protected async execCmdMaybeSudo(cmd : Array<string>) : Promise<SSH.ExecCommandResult>{
 		if(this.use_sudo){
+
+			if(!this.sudo_successful){
+				// lets test we can actually sudo, since if we can't but
+				// use_sudo is set we sometimes get we get stuck in infinite
+				// loops where we keep trying to make a directories parents, but
+				// a directory not existing looks the same as the error of
+				// "sudo: no tty present and no askpass program specified"
+				// as both exit with code 1
+				//
+				// :TODO: ideally if running treeploy interactively we should
+				// somehow pipe the password to sudo from local terminal...
+				let result = await this.client.execCommand('sudo /bin/true');
+				if(result.code === 0){
+					this.sudo_successful = true;
+				} else {
+					throw new Error("Sudo failed: " + result.stderr);
+				}
+			}
+
 			// We can't just stick sudo in front of the command as it may contains
 			// pipes etc, and we want to run the whole thing as root, not just the
 			// first part
