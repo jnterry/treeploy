@@ -65,13 +65,14 @@ export class FileDriver {
 							root_path : string,
 							reader    : IReader,
 							writer    : IWriter | undefined){
-		log.debug("Creating driver for: " + root_path + " as read only");
 
 		this.options   = options;
 		this.reader    = reader;
 		this.root_path = root_path;
 
 		if(writer === undefined){
+			log.debug("Creating driver for: " + root_path + " as read only");
+
 			this.writer = {
 				writeFile      : async () => { return; },
 				remove         : async () => { return; },
