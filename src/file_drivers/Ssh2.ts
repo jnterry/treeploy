@@ -155,7 +155,7 @@ class Ssh2Writer extends Ssh2Reader implements IWriter {
 
 	async writeFile(path : string, content : String | Buffer) : Promise<void>{
 		return this
-			.execCmdMaybeSudo(['echo', content.toString(), '>', path])
+			.execCmdMaybeSudo(['echo "' + content.toString() + '" >', path])
 			.then((result) => {
 				if(result.code === 0){
 					return;
