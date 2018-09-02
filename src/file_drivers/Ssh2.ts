@@ -109,8 +109,9 @@ class Ssh2Reader implements IReader {
 				if(result.code === 0){
 					// then path exists, and we've stat-ed it
 					switch(result.stdout){
-						case 'directory'    : return PathType.Directory;
-						case 'regular file' : return PathType.File;
+						case 'directory'          : return PathType.Directory;
+						case 'regular file'       : return PathType.File;
+						case 'regular empty file' : return PathType.File;
 						default:              return PathType.Other;
 					}
 				} else {
