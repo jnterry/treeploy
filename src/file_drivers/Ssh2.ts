@@ -46,7 +46,7 @@ class Ssh2Reader implements IReader {
 		this.sudo_successful = false;
 	}
 
-	protected async execCmdMaybeSudo(cmd : Array<string>) : Promise<SSH.ExecCommandResult>{
+	protected async execCmdMaybeSudo(cmd : Array<string>, stdin? : string) : Promise<SSH.ExecCommandResult>{
 		if(this.use_sudo){
 
 			if(!this.sudo_successful){
@@ -71,10 +71,11 @@ class Ssh2Reader implements IReader {
 			// pipes etc, and we want to run the whole thing as root, not just the
 			// first part
 			return this.client.execCommand(
-				"sudo /bin/sh -c '" + cmd.join(' ').replace("'", "/'") + "'"
+				"sudo /bin/sh -c '" + cmd.join(' ').replace("'", "/'") + "'",
+				{ stdin : stdin }
 			);
 		} else {
-			return this.client.execCommand(cmd.join(' '), {});
+			return this.client.execCommand(cmd.join(' '), { stdin : stdin });
 		}
 	}
 
@@ -153,9 +154,9 @@ class Ssh2Writer extends Ssh2Reader implements IWriter {
 		super(client, use_sudo);
 	}
 
-	async writeFile(path : string, content : String | Buffer) : Promise<void>{
+	async writeFile(path : string, content : string | Buffer) : Promise<void>{
 		return this
-			.execCmdMaybeSudo(['echo "' + content.toString() + '" >', path])
+			.execCmdMaybeSudo(['tee', path], content.toString())
 			.then((result) => {
 				if(result.code === 0){
 					return;
