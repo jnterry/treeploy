@@ -4,13 +4,13 @@
 
 "use strict";
 
-require('./common.js');
+require('../common.js');
 
 const rewire = require('rewire');
 const fs     = require('fs');
 const execSync   = require('child_process').execSync;
 
-const FileDriverLocal = rewire('../src/file_drivers/Local.ts');
+const FileDriverLocal = rewire('../../src/file_drivers/Local.ts');
 
 let getStatPermissionString = FileDriverLocal.__get__("getStatPermissionString");
 
@@ -41,8 +41,8 @@ describe('getStatPermissionString', () => {
 	}
 });
 
-describe('setAttributes', () => {
-	let fdriver = new FileDriverLocal.default.create({ path: '/', writes_enabled: true });
+describe('setAttributes', async () => {
+	let fdriver = await FileDriverLocal.default.create({ path: '/', writes_enabled: true });
 
 	beforeEach(() => {
 		mockfs({

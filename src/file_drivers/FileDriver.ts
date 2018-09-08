@@ -30,6 +30,13 @@ export interface FileDriverOptions {
 	 * Whether the driver is allowed to make modifications to the filesystem
 	 */
 	writes_enabled : boolean;
+
+	/** Driver specific option to be used by the IFileDriverFactory */
+	driver : {
+		// Which options are required depends entirely on the driver in use
+		[key: string] : any,
+	};
+
 };
 
 /**
@@ -37,28 +44,35 @@ export interface FileDriverOptions {
  */
 export class FileDriver {
 
-	private options : FileDriverOptions;
-	private reader  : IReader;
-	private writer  : IWriter;
+	private options   : FileDriverOptions;
+	private reader    : IReader;
+	private writer    : IWriter;
+	private root_path : string;
 
 	/**
 	 * Creates a new FileDriver which internally uses the specified reader and
 	 * writer for all file operations
 	 *
-	 * @param options  Additional options affecting the [[FileDriver]]'s behaviour
-	 * @param reader   Implementation for file system querying functions
-	 * @param writer   Implementation for file system modification functions
+	 * @param options   Additional options affecting the [[FileDriver]]'s behaviour
+	 * @param root_path The root path that the file driver is set to operate on
+	 * @param reader    Implementation for file system querying functions
+	 * @param writer    Implementation for file system modification functions
 	 * If set to undefined then will silently convert all write operations to
 	 * no-ops
 	 *
 	 */
-	constructor(options : FileDriverOptions,
-							reader  : IReader,
-							writer  : IWriter | undefined){
-		this.options = options;
-		this.reader  = reader;
+	constructor(options   : FileDriverOptions,
+							root_path : string,
+							reader    : IReader,
+							writer    : IWriter | undefined){
+
+		this.options   = options;
+		this.reader    = reader;
+		this.root_path = root_path;
 
 		if(writer === undefined){
+			log.debug("Creating driver for: " + root_path + " as read only");
+
 			this.writer = {
 				writeFile      : async () => { return; },
 				remove         : async () => { return; },
@@ -69,6 +83,8 @@ export class FileDriver {
 			this.writer = writer;
 		}
 	}
+
+	getRootPath() : string { return this.root_path; }
 
 	/**
 	 * Reads the contents of a file at some location
@@ -141,8 +157,9 @@ export class FileDriver {
 		if(path_type !== PathType.NoExist){
 			// The path component exists as a non-directory
 			if(!this.options.force){
-				throw new Error("Failed to create directory: " + path +
-												" due to conflicting " + path_type.toString().toLowerCase()
+				throw new Error("Failed to create directory at '" + path +
+												"' due to conflicting " + path_type.toString().toLowerCase() +
+												" and force flag is not set"
 											 );
 			}
 			log.info("Overwritting conflicting non-directory with directory: " + path);
@@ -236,10 +253,15 @@ export interface IFileDriverFactory {
 	 * Creates a new instance of a [[FileDriver]] of the type
 	 * supported by this factory
 	 */
-	create(options : FileDriverOptions) : FileDriver;
+	create(options : FileDriverOptions) : Promise<FileDriver>;
 
 	/**
 	 * Set of valid path strings that the file driver can handle
 	 */
 	path_regex : RegExp;
+
+	/**
+	 * Human readable string describing the name of this file driver
+	 */
+	name       : string;
 };
