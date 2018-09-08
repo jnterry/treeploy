@@ -67,6 +67,7 @@ class LocalReader implements IReader {
 
 	// ...but to temporarily work around a bug in mock-fs we
 	// will do this:
+	// (see: https://github.com/tschaub/mock-fs/issues/250)
 	// (note: this was broken by upgrade to node 10.10.0, specifically
 	// a change to readdir and readdirSync, see:
 	// - https://github.com/nodejs/node/blob/master/doc/changelogs/CHANGELOG_V10.md#10.10.0
