@@ -1,3 +1,7 @@
+- v1.0.0:
+    date: '2018-09-08'
+    features:
+      - Support remote deployment by adding in concept of FileDrivers, existing implementation renamed to local file driver, added a Ssh2 file driver
 - v0.5.0:
     date: '2018-08-31'
     features:

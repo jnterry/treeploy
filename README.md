@@ -4,14 +4,6 @@ _Directory tree deployment made easy_
 
 [![Build Status](https://travis-ci.org/jnterry/treeploy.svg?branch=master)](https://travis-ci.org/jnterry/treeploy) [![Coverage Status](https://coveralls.io/repos/github/jnterry/treeploy/badge.svg?branch=master)](https://coveralls.io/github/jnterry/treeploy?branch=master)
 
-## PRERELEASE
-
-**WARNING: This package is currently in prerelease**
-
-The API and CLI should not be considered stable.
-
-[See this list for tasks to complete before 1.0.0](https://github.com/jnterry/treeploy/milestone/1)
-
 # Use Cases
 
 Treeploy is designed to assist in the automated deployment of applications, micro-services, etc by building the data directories that the application expects.
