@@ -74,7 +74,6 @@ class LocalReader implements IReader {
 	// - https://github.com/nodejs/node/pull/22020
 	readdir(path : string) : Promise<string[]> {
 		return new Promise((resolve, reject) => {
-			console.log("About to trigger readdir...");
 			try {
 				let results = fs.readdirSync(path);
 				resolve(results as string[]);

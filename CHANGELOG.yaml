@@ -1,3 +1,7 @@
+- v1.0.1:
+    date: '2018-09-08'
+    fixes:
+      - Remove a debug print erroneously included in last release
 - v1.0.0:
     date: '2018-09-08'
     features:
