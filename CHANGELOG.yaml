@@ -1,3 +1,9 @@
+- v1.1.0:
+    date: '2019-12-28'
+    fixes:
+      - Disable travis testing on node versions > 10.4 since mock-fs is broken
+    features:
+      - Pass "require" function to dot templates to enable more interesting behaviour
 - v1.0.1:
     date: '2018-09-08'
     fixes:
