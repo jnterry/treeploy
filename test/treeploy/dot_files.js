@@ -112,3 +112,50 @@ it('Single template, multi-model', () => {
 		});
 	});
 });
+
+it('Require with no models', () => {
+	mockfs({
+		source : {
+			'test.txt.dot': `{{ let path = require('path'); }}{{= path.dirname('/test/dir/file.txt') }}`
+		},
+	});
+
+	return treeploy('source', 'target', {
+	}).then(() => {
+		expectFile('target/test.txt', {
+			content: '/test/dir'
+		});
+	});
+});
+
+it('Require with models', () => {
+	mockfs({
+		source : {
+			'test.txt.dot': `{{ let path = require('path'); }}{{= path.dirname(dirs.thing) }}`
+		}
+	});
+
+	return treeploy('source', 'target', {
+		dot_models : {
+			dirs : { thing : '/hello/world/file.txt' }
+		}
+	}).then(() => {
+		expectFile('target/test.txt', {
+			content: '/hello/world'
+		});
+	});
+});
+
+it('Missing module fails', () => {
+	mockfs({
+		source : {
+			'test.txt.dot': `{{= path.dirname('/hello/world/file.txt') }}`
+		}
+	});
+
+	return expect(treeploy('source', 'target', {
+		dot_models : {
+			dirs : { thing : '/hello/world/file.txt' }
+		}
+	})).to.be.rejected;
+});
