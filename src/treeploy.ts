@@ -20,7 +20,7 @@ dot_engine.templateSettings = {
   define        : /\{\{##\s*([\w\.$]+)\s*(\:|=)([\s\S]+?)#\}\}/g,
   conditional   : /\{\{\?(\?)?\s*([\s\S]*?)\s*\}\}/g,
   iterate       : /\{\{~\s*(?:\}\}|([\s\S]+?)\s*\:\s*([\w$]+)\s*(?:\:\s*([\w$]+))?\s*\}\})/g,
-  varname       : 'it, require', // default only, changed if more or less dot models
+  varname       : 'it', // ignore this, dynamically set in createTreeployContext
   strip         : false,
   append        : true,
   selfcontained : false,
@@ -102,7 +102,8 @@ async function createTreeployContext(source_path : string,
 	log.setLevel(options.verbosity || 0);
 
 	if(options.dot_models == null) {
-		result.dot_models = [require]; // 1 object for single default dot variable 'require'
+		result.dot_models = [require];
+		dot_engine.templateSettings.varname = 'require';
 	} else {
 		// we need to guarentee that the dot_engine.varname order matches up
 		// with the order of parameters we pass to templates, convert everything
@@ -113,6 +114,7 @@ async function createTreeployContext(source_path : string,
 		// and run arbitrary js code
 		let models = Object.keys(options.dot_models);
 		result.dot_models = models.map((x : string) => (<any>options).dot_models[x] );
+		result.dot_models.push(require);
 		dot_engine.templateSettings.varname = models.join(',') + ', require';
 	}
 
@@ -283,10 +285,7 @@ function processDotTemplate(template_name : string,
 	let output_content    = null;
 
 	try {
-		return output_content = template_function.apply(
-			null, // no "this" arg
-			[...dot_vars, require] // pass models, and require so templates can do interesting things
-		);
+		return output_content = template_function.apply(null, dot_vars);
 	} catch (e) {
 		throw new Error(
 			"Failed to process dot template: '" +
