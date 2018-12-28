@@ -20,7 +20,7 @@ dot_engine.templateSettings = {
   define        : /\{\{##\s*([\w\.$]+)\s*(\:|=)([\s\S]+?)#\}\}/g,
   conditional   : /\{\{\?(\?)?\s*([\s\S]*?)\s*\}\}/g,
   iterate       : /\{\{~\s*(?:\}\}|([\s\S]+?)\s*\:\s*([\w$]+)\s*(?:\:\s*([\w$]+))?\s*\}\})/g,
-  varname       : 'it', // ignore this... we actually vary varname based on model args
+  varname       : 'it, require', // default only, changed if more or less dot models
   strip         : false,
   append        : true,
   selfcontained : false,
@@ -102,7 +102,7 @@ async function createTreeployContext(source_path : string,
 	log.setLevel(options.verbosity || 0);
 
 	if(options.dot_models == null) {
-		result.dot_models = [{}]; // 1 object for single default dot variable 'it'
+		result.dot_models = [require]; // 1 object for single default dot variable 'require'
 	} else {
 		// we need to guarentee that the dot_engine.varname order matches up
 		// with the order of parameters we pass to templates, convert everything
