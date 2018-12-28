@@ -20,7 +20,7 @@ dot_engine.templateSettings = {
   define        : /\{\{##\s*([\w\.$]+)\s*(\:|=)([\s\S]+?)#\}\}/g,
   conditional   : /\{\{\?(\?)?\s*([\s\S]*?)\s*\}\}/g,
   iterate       : /\{\{~\s*(?:\}\}|([\s\S]+?)\s*\:\s*([\w$]+)\s*(?:\:\s*([\w$]+))?\s*\}\})/g,
-  varname       : 'it',
+  varname       : 'it', // ignore this, dynamically set in createTreeployContext
   strip         : false,
   append        : true,
   selfcontained : false,
@@ -102,14 +102,20 @@ async function createTreeployContext(source_path : string,
 	log.setLevel(options.verbosity || 0);
 
 	if(options.dot_models == null) {
-		result.dot_models = [{}]; // 1 object for single default dot variable 'it'
+		result.dot_models = [require];
+		dot_engine.templateSettings.varname = 'require';
 	} else {
 		// we need to guarentee that the dot_engine.varname order matches up
 		// with the order of parameters we pass to templates, convert everything
 		// to an array here and use that from now on
+		//
+		// We also add on the "require" param at the end of the array so we can pass
+		// through a reference to the require function so that templates can include
+		// and run arbitrary js code
 		let models = Object.keys(options.dot_models);
 		result.dot_models = models.map((x : string) => (<any>options).dot_models[x] );
-		dot_engine.templateSettings.varname = models.join(',');
+		result.dot_models.push(require);
+		dot_engine.templateSettings.varname = models.join(',') + ', require';
 	}
 
 	for (let df of driver_factories) {
