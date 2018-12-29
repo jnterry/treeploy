@@ -73,6 +73,8 @@ The doT.js template engine will be passed a model which can be constructed by ut
 
 The model will be built up by considering all such --model* flags from left to right and merging the results together, overwriting values if fields are repeated. This allows for having a base parameter file which is overridden by later flags, for example with production specific secrets.
 
+Note that the above and beyond standard dot.js, templates additionally support escaping delimiters with a backslash, IE: `\{{ hi \}}` will render as the string `{{ hi }}` without errors thrown by dot.js.
+
 ## tree.yaml
 
 Any files named `tree.yaml` within the input tree will be parsed in order to produce a set of files or directories in the output tree. Files named `tree.yaml.dot` will first be processed by the dot template engine, and then treated as outlined below.
