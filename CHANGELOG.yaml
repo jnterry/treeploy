@@ -1,3 +1,7 @@
+- v1.2.0:
+    date: '2019-12-29'
+    features:
+      - Enable escaping {{ }} delimeters in dot templates
 - v1.1.0:
     date: '2019-12-28'
     fixes:

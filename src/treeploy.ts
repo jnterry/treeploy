@@ -13,13 +13,13 @@ import { FileDriver, PathType } from './file_drivers/FileDriver'
 import log                      from './log';
 
 dot_engine.templateSettings = {
-  evaluate      : /\{\{([\s\S]+?)\}\}/g,
-  interpolate   : /\{\{=([\s\S]+?)\}\}/g,
-  encode        : /\{\{!([\s\S]+?)\}\}/g,
-  use           : /\{\{#([\s\S]+?)\}\}/g,
-  define        : /\{\{##\s*([\w\.$]+)\s*(\:|=)([\s\S]+?)#\}\}/g,
-  conditional   : /\{\{\?(\?)?\s*([\s\S]*?)\s*\}\}/g,
-  iterate       : /\{\{~\s*(?:\}\}|([\s\S]+?)\s*\:\s*([\w$]+)\s*(?:\:\s*([\w$]+))?\s*\}\})/g,
+  evaluate      : /(?<!\\)\{\{([\s\S]+?)\}\}/g,
+  interpolate   : /(?<!\\)\{\{=([\s\S]+?)\}\}/g,
+  encode        : /(?<!\\)\{\{!([\s\S]+?)\}\}/g,
+  use           : /(?<!\\)\{\{#([\s\S]+?)\}\}/g,
+  define        : /(?<!\\)\{\{##\s*([\w\.$]+)\s*(\:|=)([\s\S]+?)#\}\}/g,
+  conditional   : /(?<!\\)\{\{\?(\?)?\s*([\s\S]*?)\s*\}\}/g,
+  iterate       : /(?<!\\)\{\{~\s*(?:\}\}|([\s\S]+?)\s*\:\s*([\w$]+)\s*(?:\:\s*([\w$]+))?\s*\}\})/g,
   varname       : 'it', // ignore this, dynamically set in createTreeployContext
   strip         : false,
   append        : true,
@@ -282,10 +282,12 @@ function processDotTemplate(template_name : string,
 														template      : string|Buffer,
 														dot_vars      : object[]){
 	let template_function = dot_engine.template(template.toString());
-	let output_content    = null;
 
 	try {
-		return output_content = template_function.apply(null, dot_vars);
+		let out = template_function.apply(null, dot_vars);
+		out = out.replace(/\\\{\{/g, '{{');
+		out = out.replace(/\\\}\}/g, '}}');
+		return out;
 	} catch (e) {
 		throw new Error(
 			"Failed to process dot template: '" +
