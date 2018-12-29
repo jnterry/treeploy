@@ -113,49 +113,87 @@ it('Single template, multi-model', () => {
 	});
 });
 
-it('Require with no models', () => {
-	mockfs({
-		source : {
-			'test.txt.dot': `{{ let path = require('path'); }}{{= path.dirname('/test/dir/file.txt') }}`
-		},
+
+describe('require support', () => {
+	it('With no models', () => {
+		mockfs({
+			source : {
+				'test.txt.dot': `{{ let path = require('path'); }}{{= path.dirname('/test/dir/file.txt') }}`
+			},
+		});
+
+		return treeploy('source', 'target', {
+		}).then(() => {
+			expectFile('target/test.txt', {
+				content: '/test/dir'
+			});
+		});
 	});
 
-	return treeploy('source', 'target', {
-	}).then(() => {
-		expectFile('target/test.txt', {
-			content: '/test/dir'
+	it('With models', () => {
+		mockfs({
+			source : {
+				'test.txt.dot': `{{ let path = require('path'); }}{{= path.dirname(dirs.thing) }}`
+			}
 		});
+
+		return treeploy('source', 'target', {
+			dot_models : {
+				dirs : { thing : '/hello/world/file.txt' }
+			}
+		}).then(() => {
+			expectFile('target/test.txt', {
+				content: '/hello/world'
+			});
+		});
+	});
+
+	it('Missing module fails', () => {
+		mockfs({
+			source : {
+				'test.txt.dot': `{{= path.dirname('/hello/world/file.txt') }}`
+			}
+		});
+
+		return expect(treeploy('source', 'target', {
+			dot_models : {
+				dirs : { thing : '/hello/world/file.txt' }
+			}
+		})).to.be.rejected;
 	});
 });
 
-it('Require with models', () => {
-	mockfs({
-		source : {
-			'test.txt.dot': `{{ let path = require('path'); }}{{= path.dirname(dirs.thing) }}`
-		}
+
+describe('Delimiter Escaping', () => {
+	it('Start of string', () => {
+		mockfs({ 'test.txt.dot': `\\{{ hi \\}} person` });
+		return treeploy('test.txt.dot', 'test.txt', {})
+			.then(() => {
+				expectFile('test.txt', `{{ hi }} person`);
+			});
 	});
 
-	return treeploy('source', 'target', {
-		dot_models : {
-			dirs : { thing : '/hello/world/file.txt' }
-		}
-	}).then(() => {
-		expectFile('target/test.txt', {
-			content: '/hello/world'
-		});
-	});
-});
-
-it('Missing module fails', () => {
-	mockfs({
-		source : {
-			'test.txt.dot': `{{= path.dirname('/hello/world/file.txt') }}`
-		}
+	it('End of string', () => {
+		mockfs({ 'test.txt.dot': `lol \\{{ hi \\}}` });
+		return treeploy('test.txt.dot', 'test.txt', {})
+			.then(() => {
+				expectFile('test.txt', `lol {{ hi }}`);
+			});
 	});
 
-	return expect(treeploy('source', 'target', {
-		dot_models : {
-			dirs : { thing : '/hello/world/file.txt' }
-		}
-	})).to.be.rejected;
+	it('Middle of string', () => {
+		mockfs({ 'test.txt.dot': `1 \\{{ 2 \\}} 3` });
+		return treeploy('test.txt.dot', 'test.txt', {})
+			.then(() => {
+				expectFile('test.txt', `1 {{ 2 }} 3`);
+			});
+	});
+
+	it('Outside dotjs', () => {
+		mockfs({ 'test.txt.dot': `1 \\{{ 2 {{= test }} \\}} 3` });
+		return treeploy('test.txt.dot', 'test.txt', { dot_models: {test: 'hi' }})
+			.then(() => {
+				expectFile('test.txt', `1 {{ 2 hi }} 3`);
+			});
+	});
 });
