@@ -163,6 +163,47 @@ describe('require support', () => {
 	});
 });
 
+describe('[[ and {{ as delimeters', () => {
+	it('Using [[ ]]', () => {
+		mockfs({ 'test.txt.dot': `[[= test ]]` });
+		return treeploy('test.txt.dot', 'test.txt', { dot_models: {test: 'hi' }})
+			.then(() => {
+				expectFile('test.txt', `hi`);
+			});
+	});
+
+	it('Using {{ ]]', () => {
+		mockfs({ 'test.txt.dot': `{{= test ]]` });
+		return treeploy('test.txt.dot', 'test.txt', { dot_models: {test: 'hi' }})
+			.then(() => {
+				expectFile('test.txt', `{{= test ]]`);
+			});
+	});
+
+	it('Using [[ }}', () => {
+		mockfs({ 'test.txt.dot': `[[= test }}` });
+		return treeploy('test.txt.dot', 'test.txt', { dot_models: {test: 'hi' }})
+			.then(() => {
+				expectFile('test.txt', `[[= test }}`);
+			});
+	});
+
+	it('[[ in {{ }}', () => {
+		mockfs({ 'test.txt.dot': `{{ let a = [[1]]; }}{{= a[0][0] }}` });
+		return treeploy('test.txt.dot', 'test.txt', {})
+			.then(() => {
+				expectFile('test.txt', `1`);
+			});
+	});
+
+	it('}} in [[ ]]', () => {
+		mockfs({ 'test.txt.dot': `[[ let a = {b: { c: 'hi' }}; ]]{{= a.b.c }}` });
+		return treeploy('test.txt.dot', 'test.txt', {})
+			.then(() => {
+				expectFile('test.txt', `hi`);
+			});
+	});
+});
 
 describe('Delimiter Escaping', () => {
 	it('Start of string', () => {
@@ -186,6 +227,14 @@ describe('Delimiter Escaping', () => {
 		return treeploy('test.txt.dot', 'test.txt', {})
 			.then(() => {
 				expectFile('test.txt', `1 {{ 2 }} 3`);
+			});
+	});
+
+	it('Middle of string [[ ]]', () => {
+		mockfs({ 'test.txt.dot': `1 \\[[ 2 \\]] 3` });
+		return treeploy('test.txt.dot', 'test.txt', {})
+			.then(() => {
+				expectFile('test.txt', `1 [[ 2 ]] 3`);
 			});
 	});
 
