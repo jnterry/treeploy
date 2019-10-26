@@ -341,7 +341,7 @@ async function processTreeYaml(cntx            : TreeployContext,
 		output_root_dir = path.dirname(output_root_dir) + "/";
 	}
 
-	let content = (await cntx.source.readFile(input_file));
+	let content = (await cntx.source.readFile(input_file)).toString();
 
 	if(input_file.endsWith('.dot')){
 		content = processDotTemplate(input_file, content, cntx.dot_models);
@@ -351,9 +351,11 @@ async function processTreeYaml(cntx            : TreeployContext,
 
 
 	await  cntx.target.mkdir(output_root_dir);
-	return buildTreeFromDescription(tree, output_root_dir);
+	return buildTreeFromDescription(tree, output_root_dir, {});
 
-	async function buildTreeFromDescription(tree : string, output_root_dir : string){
+	async function buildTreeFromDescription(tree : string,
+																					output_root_dir : string,
+																					default_opts: any){
 		if(!output_root_dir.endsWith('/')){
 			output_root_dir += '/';
 		}
@@ -372,7 +374,10 @@ async function processTreeYaml(cntx            : TreeployContext,
 
 			if(typeof entry == 'string'){
 				name = entry;
-				opts = {};
+
+				// inherit parent attributes (except for "children" field)
+				opts = { ...default_opts };
+				delete opts.children;
 			} else {
 				let keys = Object.keys(entry);
 
@@ -386,6 +391,12 @@ async function processTreeYaml(cntx            : TreeployContext,
 
 				name = keys[0];
 				opts = entry[name];
+
+				// Inherit value from default_opts when not set
+				for(let k of Object.keys(default_opts)){
+					if(k === 'children') { continue; }
+					if(opts[k] === undefined){ opts[k] = default_opts[k]; }
+				}
 			}
 
 			while(name.startsWith('/')){
@@ -413,7 +424,7 @@ async function processTreeYaml(cntx            : TreeployContext,
 			await cntx.target.setAttributes(target_full_path, opts);
 
 			if(opts.children != null){
-				await buildTreeFromDescription(opts.children, target_full_path);
+				await buildTreeFromDescription(opts.children, target_full_path, opts);
 			}
 		}
 	}

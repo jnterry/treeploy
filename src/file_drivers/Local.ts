@@ -45,45 +45,8 @@ async function getPathType(path : string) : Promise<PathType> {
 
 class LocalReader implements IReader {
 
-	// Next line is what we want...
-	//LocalRead.prototype.readFile = promisify(fs.readFile);
-
-	// ...but to temporarily work around a bug in mock-fs we
-	// will do this:
-	// (see: https://github.com/tschaub/mock-fs/issues/245)
-	readFile(path : string) : Promise<Buffer> {
-		return new Promise((resolve, reject) => {
-			try {
-				let content = fs.readFileSync(path);
-				resolve(content)
-			} catch (e) {
-				reject(e);
-			}
-		});
-	}
-
-	// Next line is what we want...
-	//LocalRead.prototype.readdir = promisify(fs.readdir);
-
-	// ...but to temporarily work around a bug in mock-fs we
-	// will do this:
-	// (see: https://github.com/tschaub/mock-fs/issues/250)
-	// (note: this was broken by upgrade to node 10.10.0, specifically
-	// a change to readdir and readdirSync, see:
-	// - https://github.com/nodejs/node/blob/master/doc/changelogs/CHANGELOG_V10.md#10.10.0
-	// - https://github.com/nodejs/node/pull/22020
-	readdir(path : string) : Promise<string[]> {
-		return new Promise((resolve, reject) => {
-			try {
-				let results = fs.readdirSync(path);
-				resolve(results as string[]);
-			} catch (e) {
-				reject(e);
-				return;
-			}
-		});
-	}
-
+	readFile    = promisify(fs.readFile);
+	readdir     = promisify(fs.readdir);
 	getPathType = getPathType;
 
 	async getAttributes(path : string) : Promise<PathAttr> {

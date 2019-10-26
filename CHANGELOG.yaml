@@ -1,9 +1,16 @@
+- v1.3.0:
+    date: '2019-10-26'
+    features:
+      - Inherit owner/group/mode attributes from parent to children in tree.yaml files
+    fixes:
+      - Update dependencies thus solving various npm audit warnings
+      - Fix support and add testing for node v8, v10, v12 and v13
 - v1.2.0:
-    date: '2019-12-29'
+    date: '2018-12-29'
     features:
       - Enable escaping {{ }} delimeters in dot templates
 - v1.1.0:
-    date: '2019-12-28'
+    date: '2018-12-28'
     fixes:
       - Disable travis testing on node versions > 10.4 since mock-fs is broken
     features:
