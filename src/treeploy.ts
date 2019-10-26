@@ -341,7 +341,7 @@ async function processTreeYaml(cntx            : TreeployContext,
 		output_root_dir = path.dirname(output_root_dir) + "/";
 	}
 
-	let content = (await cntx.source.readFile(input_file));
+	let content = (await cntx.source.readFile(input_file)).toString();
 
 	if(input_file.endsWith('.dot')){
 		content = processDotTemplate(input_file, content, cntx.dot_models);

@@ -31,19 +31,18 @@
 		"@types/js-yaml": "3.11.2",
 		"@types/node": "10.9.2",
 		"@types/ssh2": "0.5.35",
-		"chai": "4.1.2",
+		"chai": "^4.2.0",
 		"chai-as-promised": "7.1.1",
-		"coveralls": "3.0.2",
-		"istanbul": "0.4.5",
+		"coveralls": "^3.0.6",
+		"nyc": "^14.1.1",
 		"mocha": "5.2.0",
 		"mock-fs": "4.10.2",
-		"nyc": "13.0.1",
-		"pkg": "4.3.4",
+		"pkg": "^4.4.0",
 		"rewire": "4.0.1",
-		"source-map-support": "0.5.9",
-		"ts-node": "7.0.1",
+		"source-map-support": "^0.5.13",
+		"ts-node": "8.3.0",
 		"typedoc": "^0.15.0",
-		"typescript": "3.0.1"
+		"typescript": "^3.6.2"
 	},
 	"nyc": {
 		"extension": [
