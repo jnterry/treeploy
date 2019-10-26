@@ -3,9 +3,8 @@ language: node_js
 node_js:
   - 8
   - 10.4
-  # :TODO: enable these -> mock-fs has bug in newer node versions causing unit tests to fail
-  # - lts/*
-  # - node
+  - lts/*
+  - node
 
 install:
   - npm install
