@@ -18,7 +18,6 @@ script:
   - npm test
   - ./build_release.sh
   - ./exe/treeploy-linux-x64 --help
-  - ./exe/treeploy-linux-x86 --help
 
 # Send coverage data to Coveralls
 after_script: "cat coverage/lcov.info | node_modules/coveralls/bin/coveralls.js"
